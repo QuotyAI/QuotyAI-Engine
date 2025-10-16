@@ -1,0 +1,223 @@
+### Test Dynamic Script Execution Workflow
+### This file demonstrates the complete workflow for creating, building, and executing dynamic pricing scripts
+
+### 1. Create a new pricing agent
+POST http://localhost:3000/builder/pricing-agents?tenantId=demo-tenant
+Content-Type: application/json
+
+{
+  "name": "Dynamic Script Demo Agent"
+}
+
+### 2. Get the created pricing agent to get its ID
+GET http://localhost:3000/builder/pricing-agents?tenantId=demo-tenant
+
+### 3. Add input message with pricing rules (replace {agentId} with actual value from step 2)
+POST http://localhost:3000/builder/pricing-agents/{agentId}/messages?tenantId=demo-tenant
+Content-Type: application/json
+
+{
+  "message": "General cleaning 3hrs = $100 per visit, General cleaning 4hrs = $120 per visit, General cleaning 3hrs weekly = $80 per visit, min 10 visits commitment. Deep cleaning 80-100sqm = $100, Deep cleaning > 100sqm = $1.5 per sqm, Add-ons for deep cleaning only: Curtains cleaning $20, L-Sofa cleaning $25, Upholstery 2 seats sofa $40, 3 seats sofa $50, General cleaning + Upholstery = allowed, Deep cleaning + Upholstery = not allowed, Min order $200 before taxes and processing fee, if total order < $500 tax 1.5%, if total order >= $500 tax 1.2%, processing fee is $7.5 for any service except Upholstery only"
+}
+
+### 4. Build agent - generate both schema and function from input messages
+POST http://localhost:3000/builder/pricing-agents/{agentId}/build?tenantId=demo-tenant
+
+### 5. Get the latest checkpoint to verify it has schema and function code
+GET http://localhost:3000/builder/pricing-agents/{agentId}/checkpoints?tenantId=demo-tenant
+
+### 6. Execute the dynamic script with test cases
+POST http://localhost:3000/builder/pricing-agents/{agentId}/execute?tenantId=demo-tenant
+Content-Type: application/json
+
+{
+  "testCases": [
+    {
+      "input": {
+        "services": [
+          {
+            "type": "GeneralCleaning",
+            "option": "3h-single",
+            "numberOfVisits": 2
+          }
+        ]
+      },
+      "expectedTotal": 200,
+      "description": "General cleaning 3hrs single - 2 visits"
+    },
+    {
+      "input": {
+        "services": [
+          {
+            "type": "GeneralCleaning",
+            "option": "4h-single",
+            "numberOfVisits": 1
+          }
+        ]
+      },
+      "expectedTotal": 120,
+      "description": "General cleaning 4hrs single - 1 visit"
+    },
+    {
+      "input": {
+        "services": [
+          {
+            "type": "DeepCleaning",
+            "areaSqm": 90,
+            "addons": []
+          }
+        ]
+      },
+      "expectedTotal": 100,
+      "description": "Deep cleaning 90sqm - no addons"
+    },
+    {
+      "input": {
+        "services": [
+          {
+            "type": "DeepCleaning",
+            "areaSqm": 150,
+            "addons": ["curtains"]
+          }
+        ]
+      },
+      "expectedTotal": 245,
+      "description": "Deep cleaning 150sqm with curtains addon"
+    },
+    {
+      "input": {
+        "services": [
+          {
+            "type": "Upholstery",
+            "item": "2-seats",
+            "quantity": 2
+          }
+        ]
+      },
+      "expectedTotal": 80,
+      "description": "Two 2-seat sofas upholstery"
+    }
+  ]
+}
+
+### 7. Test error case - invalid service combination
+POST http://localhost:3000/builder/pricing-agents/{agentId}/execute?tenantId=demo-tenant
+Content-Type: application/json
+
+{
+  "testCases": [
+    {
+      "input": {
+        "services": [
+          {
+            "type": "DeepCleaning",
+            "areaSqm": 90,
+            "addons": []
+          },
+          {
+            "type": "Upholstery",
+            "item": "3-seats",
+            "quantity": 1
+          }
+        ]
+      },
+      "description": "Invalid combination - Deep cleaning + Upholstery (should fail validation)"
+    }
+  ]
+}
+
+### 8. Test minimum order validation
+POST http://localhost:3000/builder/pricing-agents/{agentId}/execute?tenantId=demo-tenant
+Content-Type: application/json
+
+{
+  "testCases": [
+    {
+      "input": {
+        "services": [
+          {
+            "type": "Upholstery",
+            "item": "2-seats",
+            "quantity": 1
+          }
+        ]
+      },
+      "description": "Upholstery only - below minimum order (should fail validation)"
+    }
+  ]
+}
+
+### 9. Test weekly commitment validation
+POST http://localhost:3000/builder/pricing-agents/{agentId}/execute?tenantId=demo-tenant
+Content-Type: application/json
+
+{
+  "testCases": [
+    {
+      "input": {
+        "services": [
+          {
+            "type": "GeneralCleaning",
+            "option": "3h-weekly",
+            "numberOfVisits": 5
+          }
+        ]
+      },
+      "description": "Weekly cleaning with insufficient visits (should fail validation)"
+    }
+  ]
+}
+
+### 10. Test valid weekly commitment
+POST http://localhost:3000/builder/pricing-agents/{agentId}/execute?tenantId=demo-tenant
+Content-Type: application/json
+
+{
+  "testCases": [
+    {
+      "input": {
+        "services": [
+          {
+            "type": "GeneralCleaning",
+            "option": "3h-weekly",
+            "numberOfVisits": 15
+          }
+        ]
+      },
+      "expectedTotal": 1200,
+      "description": "Weekly cleaning with sufficient visits (15 visits at $80 each)"
+    }
+  ]
+}
+
+### 11. Test complex scenario with taxes and processing fee
+POST http://localhost:3000/builder/pricing-agents/{agentId}/execute?tenantId=demo-tenant
+Content-Type: application/json
+
+{
+  "testCases": [
+    {
+      "input": {
+        "services": [
+          {
+            "type": "GeneralCleaning",
+            "option": "3h-single",
+            "numberOfVisits": 3
+          },
+          {
+            "type": "DeepCleaning",
+            "areaSqm": 120,
+            "addons": ["l-sofa"]
+          }
+        ]
+      },
+      "expectedTotal": 553.2,
+      "description": "Complex scenario: 3x General cleaning + Deep cleaning 120sqm + L-sofa addon (subtotal $445, >= $500 tax 1.2%, + $7.5 processing)"
+    }
+  ]
+}
+
+### 12. Clean up - Delete the test agent (optional)
+DELETE http://localhost:3000/builder/pricing-agents/{agentId}?tenantId=demo-tenant
+
+###

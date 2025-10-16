@@ -1,0 +1,2 @@
+POST http://localhost:3000/builder/pricing-agents/68e8e753e54dad6bec9394b3/build/schema?tenantId=test-tenant
+Content-Type: application/json

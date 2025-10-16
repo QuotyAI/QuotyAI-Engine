@@ -1,0 +1,13 @@
+### Create a new pricing agent
+# Note: Returns pricing agent with latest checkpoint information
+POST http://localhost:3000/builder/pricing-agents?tenantId=test-tenant
+Content-Type: application/json
+
+{
+  "name": "Test Pricing Agent"
+}
+
+
+### Get all pricing agents
+# Note: Returns pricing agents with latest checkpoint information for each agent
+GET http://localhost:3000/builder/pricing-agents?tenantId=test-tenant

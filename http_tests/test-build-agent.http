@@ -1,0 +1,34 @@
+### Create a new pricing agent (prerequisite for build agent tests)
+POST http://localhost:3000/builder/pricing-agents?tenantId=test-tenant
+Content-Type: application/json
+
+{
+  "name": "Test Build Agent"
+}
+
+###
+
+### Get the created pricing agent to get its ID
+GET http://localhost:3000/builder/pricing-agents?tenantId=test-tenant
+
+###
+
+### Add input message to the initial checkpoint (replace {agentId} and {checkpointId} with actual values)
+POST http://localhost:3000/builder/pricing-agents/68e8e753e54dad6bec9394b3/messages?tenantId=test-tenant
+Content-Type: application/json
+
+{
+  "message": "General cleaning 3hrs = $100 per visit, General cleaning 4hrs = $120 per visit, General cleaning 3hrs weekly = $80 per visit, Deep cleaning 80-100sqm = $100, Deep cleaning > 100sqm = $1.5 per sqm, Add-ons for deep cleaning: Curtains cleaning $20, L-Sofa cleaning $25, Upholstery 2 seats sofa $40, 3 seats sofa $50"
+}
+
+###
+
+### Build agent - generate schema and function from input messages
+POST http://localhost:3000/builder/pricing-agents/68e8e753e54dad6bec9394b3/build?tenantId=test-tenant
+
+###
+
+### Get all checkpoints for the agent to see the new built checkpoint
+GET http://localhost:3000/builder/pricing-agents/68e8e753e54dad6bec9394b3/checkpoints?tenantId=test-tenant
+
+###

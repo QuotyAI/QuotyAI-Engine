@@ -1,0 +1,2238 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/builder/pricing-agents": {
+      "post": {
+        "operationId": "BuilderController_createPricingAgent",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePricingAgentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pricing agent created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingAgentWithLatestCheckpoint"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required parameters"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Create a new pricing agent",
+        "tags": [
+          "builder"
+        ]
+      },
+      "get": {
+        "operationId": "BuilderController_getPricingAgents",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pricing agents retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PricingAgentWithLatestCheckpoint"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Get all pricing agents for a tenant",
+        "tags": [
+          "builder"
+        ]
+      }
+    },
+    "/builder/pricing-agents/{id}": {
+      "get": {
+        "operationId": "BuilderController_getPricingAgent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pricing agent retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingAgent"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Get a specific pricing agent by ID",
+        "tags": [
+          "builder"
+        ]
+      },
+      "put": {
+        "operationId": "BuilderController_updatePricingAgent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pricing agent updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingAgent"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Update a pricing agent",
+        "tags": [
+          "builder"
+        ]
+      },
+      "delete": {
+        "operationId": "BuilderController_deletePricingAgent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pricing agent deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Delete a pricing agent",
+        "tags": [
+          "builder"
+        ]
+      }
+    },
+    "/builder/pricing-agents/{agentId}/messages": {
+      "post": {
+        "operationId": "BuilderController_addInputMessage",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkpointId",
+            "required": false,
+            "in": "query",
+            "description": "Checkpoint ID (optional, uses latest if not provided)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddHumanInputMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Input message added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingAgentCheckpoint"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingAgentCheckpoint"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - no valid input provided"
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Add input message to pricing agent",
+        "tags": [
+          "builder"
+        ]
+      }
+    },
+    "/builder/pricing-agents/{agentId}/checkpoints/{checkpointId}/messages/{messageId}": {
+      "delete": {
+        "operationId": "BuilderController_deleteInputMessage",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkpointId",
+            "required": true,
+            "in": "path",
+            "description": "Checkpoint ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "messageId",
+            "required": true,
+            "in": "path",
+            "description": "Message ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingAgentCheckpoint"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent, checkpoint, or message not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Delete an input message from a checkpoint",
+        "tags": [
+          "builder"
+        ]
+      }
+    },
+    "/builder/pricing-agents/{agentId}/build": {
+      "post": {
+        "operationId": "BuilderController_buildAgent",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkpointId",
+            "required": false,
+            "in": "query",
+            "description": "Checkpoint ID (optional, uses latest if not provided)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent built successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingAgentCheckpoint"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingAgentCheckpoint"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Build a complete pricing agent with schema and formula",
+        "tags": [
+          "builder"
+        ]
+      }
+    },
+    "/builder/pricing-agents/{agentId}/build/schema": {
+      "post": {
+        "operationId": "BuilderController_buildSchema",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkpointId",
+            "required": false,
+            "in": "query",
+            "description": "Checkpoint ID (optional, uses latest if not provided)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schema built successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "functionSchema": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": ""
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Build schema only for pricing agent",
+        "tags": [
+          "builder"
+        ]
+      }
+    },
+    "/builder/pricing-agents/{agentId}/build/formula": {
+      "post": {
+        "operationId": "BuilderController_buildFormula",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkpointId",
+            "required": false,
+            "in": "query",
+            "description": "Checkpoint ID (optional, uses latest if not provided)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Formula built successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingAgentCheckpoint"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingAgentCheckpoint"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Build formula only for pricing agent",
+        "tags": [
+          "builder"
+        ]
+      }
+    },
+    "/builder/pricing-agents/{agentId}/checkpoints": {
+      "get": {
+        "operationId": "BuilderController_getPricingAgentCheckpoints",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Maximum number of checkpoints to return (default: 50)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Checkpoints retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PricingAgentCheckpoint"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Get latest checkpoints for a pricing agent",
+        "tags": [
+          "builder"
+        ]
+      }
+    },
+    "/builder/pricing-agents/{agentId}/checkpoints/{checkpointId}": {
+      "get": {
+        "operationId": "BuilderController_getPricingAgentCheckpoint",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkpointId",
+            "required": true,
+            "in": "path",
+            "description": "Checkpoint ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Checkpoint retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingAgentCheckpoint"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Get full checkpoint data by ID",
+        "tags": [
+          "builder"
+        ]
+      }
+    },
+    "/playground/pricing-agents/{agentId}/playground": {
+      "post": {
+        "operationId": "PlaygroundController_executePlayground",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkpointId",
+            "required": false,
+            "in": "query",
+            "description": "Checkpoint ID (optional, uses latest if not provided)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaygroundExecutionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Agent executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaygroundExecutionResponseDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaygroundExecutionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid input"
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Execute agent with natural language input for playground testing",
+        "tags": [
+          "playground"
+        ]
+      }
+    },
+    "/playground/pricing-agents/{agentId}/demo-conversation": {
+      "post": {
+        "operationId": "PlaygroundController_generateDemoConversation",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkpointId",
+            "required": false,
+            "in": "query",
+            "description": "Checkpoint ID (optional, uses latest if not provided)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Demo conversation generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoConversationResponseDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoConversationResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Generate a demo conversation for the pricing agent",
+        "tags": [
+          "playground"
+        ]
+      }
+    },
+    "/quality/testing-datasets": {
+      "get": {
+        "operationId": "TestingDatasetController_findTestingDatasets",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "query",
+            "description": "Filter by tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkpointId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by checkpoint ID (optional)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "required": false,
+            "in": "query",
+            "description": "Search by dataset name (case-insensitive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "description",
+            "required": false,
+            "in": "query",
+            "description": "Search by dataset description (case-insensitive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Maximum number of results to return",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Testing datasets retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TestingDataset"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - tenantId is required"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Search testing datasets with flexible criteria",
+        "tags": [
+          "quality"
+        ]
+      },
+      "post": {
+        "operationId": "TestingDatasetController_createTestingDataset",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Testing dataset created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestingDataset"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required parameters"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Create a new testing dataset",
+        "tags": [
+          "quality"
+        ]
+      }
+    },
+    "/quality/testing-datasets/{id}": {
+      "get": {
+        "operationId": "TestingDatasetController_getTestingDataset",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Testing dataset ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Testing dataset retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestingDataset"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Testing dataset not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Get a specific testing dataset by ID",
+        "tags": [
+          "quality"
+        ]
+      },
+      "put": {
+        "operationId": "TestingDatasetController_updateTestingDataset",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Testing dataset ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Testing dataset updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestingDataset"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Testing dataset not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Update a testing dataset",
+        "tags": [
+          "quality"
+        ]
+      },
+      "delete": {
+        "operationId": "TestingDatasetController_deleteTestingDataset",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Testing dataset ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Testing dataset deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Testing dataset not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Delete a testing dataset",
+        "tags": [
+          "quality"
+        ]
+      }
+    },
+    "/quality/testing-datasets/{id}/with-tests": {
+      "get": {
+        "operationId": "TestingDatasetController_getTestingDatasetWithTests",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Testing dataset ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Testing dataset with tests retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestingDatasetWithTestsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Testing dataset not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Get a specific testing dataset by ID with loaded tests",
+        "tags": [
+          "quality"
+        ]
+      }
+    },
+    "/quality/pricing-agents/{agentId}/checkpoints/{checkpointId}/datasets/{datasetId}": {
+      "post": {
+        "operationId": "TestingDatasetController_assignTestingDataset",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "datasetId",
+            "required": true,
+            "in": "path",
+            "description": "Testing dataset ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Testing dataset assigned successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentResultDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - dataset already assigned or invalid parameters"
+          },
+          "404": {
+            "description": "Pricing agent, checkpoint, or dataset not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Assign a testing dataset to a pricing agent checkpoint",
+        "tags": [
+          "quality"
+        ]
+      }
+    },
+    "/quality/pricing-agents/{agentId}/build/dataset": {
+      "post": {
+        "operationId": "TestingDatasetController_aiGenerateDataset",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkpointId",
+            "required": false,
+            "in": "query",
+            "description": "Checkpoint ID (optional, uses latest if not provided)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dataset generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestingDatasetWithTestsDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestingDatasetWithTestsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "AI generate testing dataset",
+        "tags": [
+          "quality"
+        ]
+      }
+    },
+    "/quality/pricing-agents/{agentId}/checkpoints/{checkpointId}/testset": {
+      "get": {
+        "operationId": "TestingDatasetController_getCheckpointTestset",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkpointId",
+            "required": true,
+            "in": "path",
+            "description": "Checkpoint ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Testset retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckpointTestsetDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Get checkpoint testset with test data",
+        "tags": [
+          "quality"
+        ]
+      }
+    },
+    "/quality/pricing-agents/{agentId}/build/testset": {
+      "post": {
+        "operationId": "TestingDatasetController_aiGenerateCheckpointTestsetFromAssignedDatasets",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkpointId",
+            "required": false,
+            "in": "query",
+            "description": "Checkpoint ID (optional, uses latest if not provided)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Testset generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckpointTestsetDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckpointTestsetDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - no assigned datasets or missing schema"
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "AI generate testset from assigned datasets",
+        "tags": [
+          "quality"
+        ]
+      }
+    },
+    "/quality/pricing-agents/{agentId}/test": {
+      "post": {
+        "operationId": "TestingDatasetController_runCheckpointTestset",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkpointId",
+            "required": false,
+            "in": "query",
+            "description": "Checkpoint ID (optional, uses latest if not provided)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "failFast",
+            "required": false,
+            "in": "query",
+            "description": "Stop execution on first unexpected failure",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tests executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckpointTestsetDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckpointTestsetDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Runs checkpoint testset",
+        "tags": [
+          "quality"
+        ]
+      }
+    },
+    "/pricing-table-extraction/extract": {
+      "post": {
+        "operationId": "PricingTableExtractionController_extractPricingTable",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PricingTableExtractionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pricing table extracted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractedPricingTable"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractedPricingTable"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid image data"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Extract pricing table from image",
+        "tags": [
+          "pricing-table-extraction"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Pricing Agent Builder API",
+    "description": "API documentation for the Pricing Agent Builder service",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "pricing-agents",
+      "description": ""
+    },
+    {
+      "name": "builder",
+      "description": ""
+    }
+  ],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "CreatePricingAgentDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "TagEnum": {
+        "type": "string",
+        "enum": [
+          "PRICING_TABLE_ADDED",
+          "PRICING_TABLE_UPDATED",
+          "CALCULATION_FORMULA_RULE_ADDED",
+          "CALCULATION_FORMULA_RULE_UPDATED",
+          "NEW_PROMOTION"
+        ]
+      },
+      "HumanInputMessage": {
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagEnum"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "createdAt"
+        ]
+      },
+      "PricingAgentCheckpoint": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pricingAgentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number"
+          },
+          "humanInputMessages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HumanInputMessage"
+            }
+          },
+          "functionSchema": {
+            "type": "string"
+          },
+          "functionCode": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "checkpointTrigger": {
+            "type": "object"
+          },
+          "checkpointDescription": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "pricingAgentId",
+          "tenantId",
+          "version",
+          "humanInputMessages",
+          "createdAt",
+          "checkpointTrigger"
+        ]
+      },
+      "PricingAgentWithLatestCheckpoint": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "latestCheckpoint": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PricingAgentCheckpoint"
+              }
+            ]
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "tenantId",
+          "name",
+          "createdAt"
+        ]
+      },
+      "PricingAgent": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "tenantId",
+          "name",
+          "createdAt"
+        ]
+      },
+      "AddHumanInputMessageDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "PRICING_TABLE_ADDED",
+                "PRICING_TABLE_UPDATED",
+                "CALCULATION_FORMULA_RULE_ADDED",
+                "CALCULATION_FORMULA_RULE_UPDATED",
+                "NEW_PROMOTION"
+              ]
+            }
+          }
+        }
+      },
+      "ChatbotMessage": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "The message text"
+          },
+          "role": {
+            "type": "string",
+            "description": "The role of the message sender",
+            "enum": [
+              "AI",
+              "User"
+            ]
+          }
+        },
+        "required": [
+          "message",
+          "role"
+        ]
+      },
+      "PlaygroundExecutionRequestDto": {
+        "type": "object",
+        "properties": {
+          "input": {
+            "type": "string"
+          },
+          "conversation": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatbotMessage"
+            }
+          }
+        },
+        "required": [
+          "input"
+        ]
+      },
+      "BacktraceCalculationStepDTO": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "subTasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BacktraceCalculationStepDTO"
+            }
+          }
+        },
+        "required": [
+          "operation",
+          "description"
+        ]
+      },
+      "QuoteErrorDTO": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "QuoteResultDTO": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "pricingCalculationBacktrace": {
+            "$ref": "#/components/schemas/BacktraceCalculationStepDTO"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuoteErrorDTO"
+            }
+          }
+        }
+      },
+      "PlaygroundExecutionResponseDto": {
+        "type": "object",
+        "properties": {
+          "structuredOrder": {
+            "type": "object",
+            "description": "The structured order input converted from natural language"
+          },
+          "functionResult": {
+            "description": "The result from executing the pricing function",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuoteResultDTO"
+              }
+            ]
+          },
+          "aiMessage": {
+            "type": "string",
+            "description": "The AI-generated response message for the playground conversation"
+          }
+        },
+        "required": [
+          "structuredOrder",
+          "functionResult",
+          "aiMessage"
+        ]
+      },
+      "DemoConversationResponseDto": {
+        "type": "object",
+        "properties": {
+          "conversationHistory": {
+            "description": "Conversation history with previous messages",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatbotMessage"
+            }
+          },
+          "nextUserMessage": {
+            "type": "string",
+            "description": "The next user message for order confirmation"
+          }
+        },
+        "required": [
+          "nextUserMessage"
+        ]
+      },
+      "TestingDataset": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "name",
+          "tenantId",
+          "createdAt"
+        ]
+      },
+      "HappyPathTestData": {
+        "type": "object",
+        "properties": {
+          "orderInputNaturalLanguage": {
+            "type": "string"
+          },
+          "expectedTotal": {
+            "type": "number"
+          },
+          "expectedTotalReasoning": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orderInputNaturalLanguage",
+          "expectedTotal",
+          "expectedTotalReasoning"
+        ]
+      },
+      "DatasetHappyPathTestData": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "testingDatasetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/HappyPathTestData"
+          }
+        },
+        "required": [
+          "testingDatasetId",
+          "tenantId",
+          "data"
+        ]
+      },
+      "UnhappyPathTestData": {
+        "type": "object",
+        "properties": {
+          "orderInputNaturalLanguage": {
+            "type": "string"
+          },
+          "expectedErrorType": {
+            "type": "string",
+            "enum": [
+              "NOT_ENOUGH_DATA_TO_QUOTE",
+              "INCORRECT_ORDER_PARAMETER_VALUE",
+              "QUOTATION_RULE_VIOLATION"
+            ]
+          },
+          "expectedErrorReasoning": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orderInputNaturalLanguage",
+          "expectedErrorType",
+          "expectedErrorReasoning"
+        ]
+      },
+      "DatasetUnhappyPathTestData": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "testingDatasetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/UnhappyPathTestData"
+          }
+        },
+        "required": [
+          "testingDatasetId",
+          "tenantId",
+          "data"
+        ]
+      },
+      "TestingDatasetWithTestsDto": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "happyPathTests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetHappyPathTestData"
+            }
+          },
+          "unhappyPathTests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetUnhappyPathTestData"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "tenantId",
+          "createdAt"
+        ]
+      },
+      "AssignmentResultDto": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string"
+          },
+          "datasetId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "assignedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agentId",
+          "datasetId",
+          "tenantId",
+          "assignedAt",
+          "message"
+        ]
+      },
+      "TestResultDTO": {
+        "type": "object",
+        "properties": {
+          "passed": {
+            "type": "boolean"
+          },
+          "functionResult": {
+            "$ref": "#/components/schemas/QuoteResultDTO"
+          },
+          "runnerException": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "passed"
+        ]
+      },
+      "CheckpointHappyPathTestWithData": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "checkpointId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "datasetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "datasetTestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "functionInputParams": {
+            "type": "object"
+          },
+          "testRunResult": {
+            "$ref": "#/components/schemas/TestResultDTO"
+          },
+          "testData": {
+            "$ref": "#/components/schemas/HappyPathTestData"
+          }
+        },
+        "required": [
+          "checkpointId",
+          "datasetId",
+          "datasetTestId",
+          "tenantId",
+          "createdAt",
+          "functionInputParams",
+          "testData"
+        ]
+      },
+      "CheckpointUnhappyPathTestWithData": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "checkpointId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "datasetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "datasetTestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "functionInputParams": {
+            "type": "object"
+          },
+          "testRunResult": {
+            "$ref": "#/components/schemas/TestResultDTO"
+          },
+          "testData": {
+            "$ref": "#/components/schemas/UnhappyPathTestData"
+          }
+        },
+        "required": [
+          "checkpointId",
+          "datasetId",
+          "datasetTestId",
+          "tenantId",
+          "createdAt",
+          "functionInputParams",
+          "testData"
+        ]
+      },
+      "CheckpointTestsetDto": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "checkpointId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "happyPathTests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CheckpointHappyPathTestWithData"
+            }
+          },
+          "unhappyPathTests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CheckpointUnhappyPathTestWithData"
+            }
+          }
+        },
+        "required": [
+          "checkpointId",
+          "tenantId"
+        ]
+      },
+      "PricingTableExtractionRequest": {
+        "type": "object",
+        "properties": {
+          "imageData": {
+            "type": "string"
+          },
+          "imageMimeType": {
+            "type": "string"
+          },
+          "additionalContext": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "imageData",
+          "imageMimeType"
+        ]
+      },
+      "ExtractedPricingTable": {
+        "type": "object",
+        "properties": {
+          "markdown": {
+            "type": "string"
+          },
+          "rawText": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "markdown",
+          "rawText",
+          "confidence"
+        ]
+      }
+    }
+  }
+}
