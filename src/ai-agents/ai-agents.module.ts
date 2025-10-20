@@ -9,12 +9,14 @@ import { AiSchemaGenerationAgentService } from './ai-schema-generation.agent';
 import { AiPlaygroundMessageAgentService } from './ai-playground-message.agent';
 import { AiDemoConversationAgentService } from './ai-demo-conversation.agent';
 import { AiPricingTableExtractionAgentService } from './ai-pricing-table-extraction.agent';
+import { LLMService } from './llm.service';
 
 @Module({
   imports: [],
   controllers: [],
   providers: [
     databaseConfig,
+    LLMService,
     AiFormulaGenerationAgentService,
     AiHappyPathDatasetGenerationAgentService,
     AiUnhappyPathDatasetGenerationAgentService,
@@ -27,6 +29,7 @@ import { AiPricingTableExtractionAgentService } from './ai-pricing-table-extract
   ],
   exports: [
     'DATABASE_CONNECTION',
+    LLMService,
     AiFormulaGenerationAgentService,
     AiHappyPathDatasetGenerationAgentService,
     AiUnhappyPathDatasetGenerationAgentService,

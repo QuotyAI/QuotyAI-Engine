@@ -1,6 +1,6 @@
 const { NestFactory } = require('@nestjs/core');
 const { DocumentBuilder, SwaggerModule } = require('@nestjs/swagger');
-const { AppModule } = require('./dist/src/app.module');
+const { AppModule } = require('./dist/app.module');
 const fs = require('fs');
 const path = require('path');
 

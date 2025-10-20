@@ -1,25 +1,25 @@
+import { IsString, IsNotEmpty, IsOptional, IsArray } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { TestingDataset, DatasetHappyPathTestData, DatasetUnhappyPathTestData } from '../models/mongodb.model';
+import { DatasetHappyPathTestData, DatasetUnhappyPathTestData } from '../models/mongodb.model';
 
-export class TestingDatasetWithTestsDto {
-  @ApiProperty({ name: '_id', type: String, format: 'uuid' })
-  _id?: string;
-
+export class CreateTestingDatasetDto {
   @ApiProperty({ type: String })
+  @IsString()
+  @IsNotEmpty()
   name: string;
 
   @ApiProperty({ type: String, required: false })
+  @IsString()
+  @IsOptional()
   description?: string;
 
-  @ApiProperty({ type: Date })
-  createdAt: Date;
-
-  @ApiProperty({ type: Date, required: false })
-  deletedAt?: Date | null;
-
   @ApiProperty({ type: [DatasetHappyPathTestData], required: false })
+  @IsArray()
+  @IsOptional()
   happyPathTests?: DatasetHappyPathTestData[];
 
   @ApiProperty({ type: [DatasetUnhappyPathTestData], required: false })
+  @IsArray()
+  @IsOptional()
   unhappyPathTests?: DatasetUnhappyPathTestData[];
 }

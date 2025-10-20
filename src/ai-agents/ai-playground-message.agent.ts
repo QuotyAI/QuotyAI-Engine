@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatVertexAI } from '@langchain/google-vertexai';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 import { QuoteResult } from '../models/mongodb.model';
+import { LLMService, LLMServiceConfig } from './llm.service';
 
 export interface PlaygroundMessageGenerationRequest {
   conversation: Array<{
@@ -22,15 +24,13 @@ const PlaygroundMessageSchema = z.object({
 
 @Injectable()
 export class AiPlaygroundMessageAgentService {
-  private llm: ChatVertexAI;
   private readonly logger = new Logger(AiPlaygroundMessageAgentService.name);
 
-  constructor() {
-    this.llm = new ChatVertexAI({ model: 'gemini-2.5-flash' });
-    this.logger.log('AiPlaygroundMessageAgentService initialized with Gemini 2.5 Flash model');
+  constructor(private readonly llmService: LLMService) {
+    this.logger.log('AiPlaygroundMessageAgentService initialized');
   }
 
-  async generatePlaygroundMessage(request: PlaygroundMessageGenerationRequest): Promise<PlaygroundMessageGenerationResponse> {
+  async generatePlaygroundMessage(request: PlaygroundMessageGenerationRequest, llmConfig?: LLMServiceConfig): Promise<PlaygroundMessageGenerationResponse> {
     this.logger.log(`Generating AI playground message`);
 
     try {
@@ -39,10 +39,13 @@ export class AiPlaygroundMessageAgentService {
 
       this.logger.debug(`Prompt generated: ${prompt.systemPrompt.length} characters`);
 
+      // Get the LLM instance
+      const llm = await this.llmService.getLLM(llmConfig);
+
       // Generate the AI message
-      const result = await this.llm.invoke([
-        { role: 'system', content: prompt.systemPrompt },
-        { role: 'user', content: prompt.userMessage }
+      const result = await llm.invoke([
+        new SystemMessage(prompt.systemPrompt),
+        new HumanMessage(prompt.userMessage)
       ]);
 
       const llmResult = this.convertLlmOutputToSchema(result.content as string);

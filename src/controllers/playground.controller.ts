@@ -1,5 +1,5 @@
-import { Controller, Post, Param, Body, Query, HttpException, HttpStatus, Logger, Inject } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { Controller, Post, Param, Body, Query, Headers, HttpException, HttpStatus, Logger, Inject, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiHeader, ApiResponse } from '@nestjs/swagger';
 import { Db } from 'mongodb';
 import { ObjectId } from 'mongodb';
 import { AiOrderConversionAgentService } from '../ai-agents/ai-order-conversion.agent';
@@ -7,9 +7,11 @@ import { AiPlaygroundMessageAgentService } from '../ai-agents/ai-playground-mess
 import { AiDemoConversationAgentService } from '../ai-agents/ai-demo-conversation.agent';
 import { DynamicRunnerService } from '../services/dynamic-runner.service';
 import { PlaygroundExecutionRequestDto, PlaygroundExecutionResponseDto, DemoConversationResponseDto } from '../dtos/playground-execution.dto';
+import { AuthGuard } from '../auth/auth.guard';
 
 @ApiTags('playground')
 @Controller('playground')
+@UseGuards(AuthGuard)
 export class PlaygroundController {
   private readonly logger = new Logger(PlaygroundController.name);
 
@@ -31,7 +33,7 @@ export class PlaygroundController {
   @Post('pricing-agents/:agentId/playground')
   @ApiOperation({ summary: 'Execute agent with natural language input for playground testing' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
-  @ApiQuery({ name: 'tenantId', description: 'Tenant ID', required: false })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
   @ApiQuery({ name: 'checkpointId', description: 'Checkpoint ID (optional, uses latest if not provided)', required: false })
   @ApiResponse({ status: 200, description: 'Agent executed successfully', type: PlaygroundExecutionResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request - invalid input' })
@@ -40,7 +42,7 @@ export class PlaygroundController {
   async executePlayground(
     @Param('agentId') agentId: string,
     @Body() body: PlaygroundExecutionRequestDto,
-    @Query('tenantId') tenantId?: string,
+    @Headers('X-Tenant-ID') tenantId?: string,
     @Query('checkpointId') checkpointId?: string
   ): Promise<PlaygroundExecutionResponseDto> {
     try {
@@ -125,14 +127,14 @@ export class PlaygroundController {
   @Post('pricing-agents/:agentId/demo-conversation')
   @ApiOperation({ summary: 'Generate a demo conversation for the pricing agent' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
-  @ApiQuery({ name: 'tenantId', description: 'Tenant ID', required: false })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
   @ApiQuery({ name: 'checkpointId', description: 'Checkpoint ID (optional, uses latest if not provided)', required: false })
   @ApiResponse({ status: 200, description: 'Demo conversation generated successfully', type: DemoConversationResponseDto })
   @ApiResponse({ status: 404, description: 'Pricing agent or checkpoint not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async generateDemoConversation(
     @Param('agentId') agentId: string,
-    @Query('tenantId') tenantId?: string,
+    @Headers('X-Tenant-ID') tenantId?: string,
     @Query('checkpointId') checkpointId?: string
   ): Promise<DemoConversationResponseDto> {
     try {

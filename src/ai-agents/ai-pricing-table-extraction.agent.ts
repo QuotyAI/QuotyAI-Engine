@@ -1,24 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatVertexAI } from '@langchain/google-vertexai';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 import { ExtractedPricingTable, PricingTableExtractionRequest } from 'src/dtos/text-extraction.dto';
+import { LLMService, LLMServiceConfig } from './llm.service';
 
 
 @Injectable()
 export class AiPricingTableExtractionAgentService {
-  private llm: ChatVertexAI;
   private readonly logger = new Logger(AiPricingTableExtractionAgentService.name);
 
-  constructor() {
-    this.llm = new ChatVertexAI({
-      model: 'gemini-2.0-flash-exp',
-      temperature: 0.1, // Low temperature for consistent extraction
-    });
-    this.logger.log('PricingTableExtractionAgentService initialized with Gemini 2.0 Flash Exp model');
+  constructor(private readonly llmService: LLMService) {
+    this.logger.log('AiPricingTableExtractionAgentService initialized');
   }
 
-  async extractPricingTable(request: PricingTableExtractionRequest): Promise<ExtractedPricingTable> {
+  async extractPricingTable(request: PricingTableExtractionRequest, llmConfig?: LLMServiceConfig): Promise<ExtractedPricingTable> {
     this.logger.log(`Extracting pricing table from image (${request.imageMimeType})`);
 
     try {
@@ -26,6 +23,9 @@ export class AiPricingTableExtractionAgentService {
       const prompt = this.generatePrompt(request.additionalContext);
 
       this.logger.debug(`Prompt generated: ${prompt.length} characters`);
+
+      // Get the LLM instance
+      const llm = await this.llmService.getLLM(llmConfig);
 
       // Create image message for the LLM
       const imageMessage = {
@@ -36,15 +36,14 @@ export class AiPricingTableExtractionAgentService {
       };
 
       // Extract pricing table using vision capabilities
-      const result = await this.llm.invoke([
-        { role: 'system', content: prompt },
-        {
-          role: 'user',
+      const result = await llm.invoke([
+        new SystemMessage(prompt),
+        new HumanMessage({
           content: [
             { type: 'text', text: 'Please extract the pricing table from this image into markdown format, including any additional rules and conditions mentioned.' },
             imageMessage,
           ],
-        },
+        })
       ]);
 
       const response = (result.content as string).trim();

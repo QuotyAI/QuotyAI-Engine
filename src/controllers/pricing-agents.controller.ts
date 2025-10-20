@@ -1,32 +1,38 @@
-import { Controller, Post, Get, Put, Delete, Body, Param, Query, HttpException, HttpStatus, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { Controller, Post, Get, Put, Delete, Body, Param, Query, Headers, HttpException, HttpStatus, Logger, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiHeader } from '@nestjs/swagger';
 import { PricingAgentService } from '../services/pricing-agent.service';
 import { PricingAgent, PricingAgentCheckpoint } from '../models/mongodb.model';
 import { PricingAgentWithLatestCheckpoint } from 'src/dtos/pricing-agent-with-latest-checkpoint.dto';
 import { CreatePricingAgentDto } from '../dtos/create-pricing-agent.dto';
 import { AddHumanInputMessageDto } from '../dtos/add-input-message.dto';
 import { isMultiTenancyEnabled } from '../config/multi-tenancy.config';
+import { AuthGuard } from '../auth/auth.guard';
+import { TestingDatasetService } from 'src/services/testing-dataset.service';
+import { AssignmentResultDto } from 'src/dtos/assignment-result.dto';
+import { TestingDatasetWithTestsDto } from 'src/dtos/testing-dataset-with-tests.dto';
 
-@ApiTags('builder')
-@Controller('builder')
-export class BuilderController {
-  private readonly logger = new Logger(BuilderController.name);
+@ApiTags('pricing-agents')
+@Controller('pricing-agents')
+@UseGuards(AuthGuard)
+export class PricingAgentsController {
+  private readonly logger = new Logger(PricingAgentsController.name);
 
   constructor(
-    private readonly pricingAgentService: PricingAgentService) {
-    this.logger.log('BuilderController initialized');
+    private readonly pricingAgentService: PricingAgentService,
+    private readonly testingDatasetService: TestingDatasetService) {
+    this.logger.log('pricingAgentsController initialized');
   }
 
   // Pricing Agent CRUD endpoints
-  @Post('pricing-agents')
+  @Post('')
   @ApiOperation({ summary: 'Create a new pricing agent' })
-  @ApiQuery({ name: 'tenantId', description: 'Tenant ID (required in multi-tenant mode)', required: false })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID (required in multi-tenant mode)', required: false })
   @ApiResponse({ status: 201, description: 'Pricing agent created successfully', type: PricingAgentWithLatestCheckpoint })
   @ApiResponse({ status: 400, description: 'Bad request - missing required parameters' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async createPricingAgent(
     @Body() body: CreatePricingAgentDto,
-    @Query('tenantId') tenantId?: string
+    @Headers('X-Tenant-ID') tenantId?: string
   ): Promise<PricingAgentWithLatestCheckpoint> {
     this.logger.log(`Creating pricing agent: ${body.name} for tenant: ${tenantId}`);
 
@@ -34,7 +40,7 @@ export class BuilderController {
       if ((isMultiTenancyEnabled && !tenantId) || !body.name) {
         this.logger.warn(`Missing required parameters - tenantId: ${tenantId}, name: ${body.name}`);
         throw new HttpException(
-          `${isMultiTenancyEnabled ? 'tenantId (query param) and ' : ''}name are required`,
+          `${isMultiTenancyEnabled ? 'tenantId (header) and ' : ''}name are required`,
           HttpStatus.BAD_REQUEST
         );
       }
@@ -79,13 +85,13 @@ export class BuilderController {
     }
   }
 
-  @Get('pricing-agents')
+  @Get('')
   @ApiOperation({ summary: 'Get all pricing agents for a tenant' })
-  @ApiQuery({ name: 'tenantId', description: 'Tenant ID (required in multi-tenant mode)', required: false })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID (required in multi-tenant mode)', required: false })
   @ApiResponse({ status: 200, description: 'Pricing agents retrieved successfully', type: [PricingAgentWithLatestCheckpoint] })
   @ApiResponse({ status: 400, description: 'Bad request - tenantId required in multi-tenant mode' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async getPricingAgents(@Query('tenantId') tenantId?: string): Promise<PricingAgentWithLatestCheckpoint[]> {
+  async getPricingAgents(@Headers('X-Tenant-ID') tenantId?: string): Promise<PricingAgentWithLatestCheckpoint[]> {
     this.logger.log(`Getting pricing agents for tenant: ${tenantId}`);
 
     try {
@@ -110,15 +116,15 @@ export class BuilderController {
     }
   }
 
-  @Get('pricing-agents/:id')
+  @Get('/:id')
   @ApiOperation({ summary: 'Get a specific pricing agent by ID' })
   @ApiParam({ name: 'id', description: 'Pricing agent ID' })
-  @ApiQuery({ name: 'tenantId', description: 'Tenant ID (required in multi-tenant mode)', required: false })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID (required in multi-tenant mode)', required: false })
   @ApiResponse({ status: 200, description: 'Pricing agent retrieved successfully', type: PricingAgent })
   @ApiResponse({ status: 400, description: 'Bad request - tenantId required in multi-tenant mode' })
   @ApiResponse({ status: 404, description: 'Pricing agent not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async getPricingAgent(@Param('id') id: string, @Query('tenantId') tenantId?: string): Promise<PricingAgent> {
+  async getPricingAgent(@Param('id') id: string, @Headers('X-Tenant-ID') tenantId?: string): Promise<PricingAgent> {
     this.logger.log(`Getting pricing agent: ${id} for tenant: ${tenantId}`);
 
     try {
@@ -147,10 +153,10 @@ export class BuilderController {
     }
   }
 
-  @Put('pricing-agents/:id')
+  @Put('/:id')
   @ApiOperation({ summary: 'Update a pricing agent' })
   @ApiParam({ name: 'id', description: 'Pricing agent ID' })
-  @ApiQuery({ name: 'tenantId', description: 'Tenant ID (required in multi-tenant mode)', required: false })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID (required in multi-tenant mode)', required: false })
   @ApiResponse({ status: 200, description: 'Pricing agent updated successfully', type: PricingAgent })
   @ApiResponse({ status: 400, description: 'Bad request - tenantId required in multi-tenant mode' })
   @ApiResponse({ status: 404, description: 'Pricing agent not found' })
@@ -158,7 +164,7 @@ export class BuilderController {
   async updatePricingAgent(
     @Param('id') id: string,
     @Body() body: Partial<Omit<PricingAgent, '_id' | 'createdAt'>>,
-    @Query('tenantId') tenantId?: string
+    @Headers('X-Tenant-ID') tenantId?: string
   ): Promise<PricingAgent> {
     this.logger.log(`Updating pricing agent: ${id} for tenant: ${tenantId}`);
 
@@ -188,15 +194,15 @@ export class BuilderController {
     }
   }
 
-  @Delete('pricing-agents/:id')
+  @Delete('/:id')
   @ApiOperation({ summary: 'Delete a pricing agent' })
   @ApiParam({ name: 'id', description: 'Pricing agent ID' })
-  @ApiQuery({ name: 'tenantId', description: 'Tenant ID (required in multi-tenant mode)', required: false })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID (required in multi-tenant mode)', required: false })
   @ApiResponse({ status: 200, description: 'Pricing agent deleted successfully', schema: { type: 'object', properties: { deleted: { type: 'boolean' } } } })
   @ApiResponse({ status: 400, description: 'Bad request - tenantId required in multi-tenant mode' })
   @ApiResponse({ status: 404, description: 'Pricing agent not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async deletePricingAgent(@Param('id') id: string, @Query('tenantId') tenantId?: string): Promise<{ deleted: boolean }> {
+  async deletePricingAgent(@Param('id') id: string, @Headers('X-Tenant-ID') tenantId?: string): Promise<{ deleted: boolean }> {
     this.logger.log(`Deleting pricing agent: ${id} for tenant: ${tenantId}`);
 
     try {
@@ -225,11 +231,11 @@ export class BuilderController {
     }
   }
 
-  @Post('pricing-agents/:agentId/messages')
+  @Post('/:agentId/messages')
   @ApiOperation({ summary: 'Add input message to pricing agent' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
   @ApiQuery({ name: 'checkpointId', description: 'Checkpoint ID (optional, uses latest if not provided)', required: false })
-  @ApiQuery({ name: 'tenantId', description: 'Tenant ID', required: false })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
   @ApiResponse({ status: 200, description: 'Input message added successfully', type: PricingAgentCheckpoint })
   @ApiResponse({ status: 400, description: 'Bad request - no valid input provided' })
   @ApiResponse({ status: 404, description: 'Pricing agent or checkpoint not found' })
@@ -238,7 +244,7 @@ export class BuilderController {
     @Param('agentId') agentId: string,
     @Body() body: AddHumanInputMessageDto,
     @Query('checkpointId') checkpointId?: string,
-    @Query('tenantId') tenantId?: string
+    @Headers('X-Tenant-ID') tenantId?: string
   ): Promise<PricingAgentCheckpoint> {
     this.logger.log(`Adding input message to agent: ${agentId} for tenant: ${tenantId}`);
 
@@ -282,12 +288,12 @@ export class BuilderController {
     }
   }
 
-  @Delete('pricing-agents/:agentId/checkpoints/:checkpointId/messages/:messageId')
+  @Delete('/:agentId/checkpoints/:checkpointId/messages/:messageId')
   @ApiOperation({ summary: 'Delete an input message from a checkpoint' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
   @ApiParam({ name: 'checkpointId', description: 'Checkpoint ID' })
   @ApiParam({ name: 'messageId', description: 'Message ID' })
-  @ApiQuery({ name: 'tenantId', description: 'Tenant ID', required: false })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
   @ApiResponse({ status: 200, description: 'Message deleted successfully', type: PricingAgentCheckpoint })
   @ApiResponse({ status: 404, description: 'Pricing agent, checkpoint, or message not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
@@ -295,7 +301,7 @@ export class BuilderController {
     @Param('agentId') agentId: string,
     @Param('checkpointId') checkpointId: string,
     @Param('messageId') messageId: string,
-    @Query('tenantId') tenantId?: string
+    @Headers('X-Tenant-ID') tenantId?: string
   ): Promise<PricingAgentCheckpoint> {
     this.logger.log(`Deleting message: ${messageId} from checkpoint: ${checkpointId} for agent: ${agentId} for tenant: ${tenantId}`);
 
@@ -334,17 +340,17 @@ export class BuilderController {
     }
   }
 
-  @Post('pricing-agents/:agentId/build')
+  @Post('/:agentId/build')
   @ApiOperation({ summary: 'Build a complete pricing agent with schema and formula' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
-  @ApiQuery({ name: 'tenantId', description: 'Tenant ID', required: false })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
   @ApiQuery({ name: 'checkpointId', description: 'Checkpoint ID (optional, uses latest if not provided)', required: false })
   @ApiResponse({ status: 200, description: 'Agent built successfully', type: PricingAgentCheckpoint })
   @ApiResponse({ status: 404, description: 'Pricing agent or checkpoint not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async buildAgent(
     @Param('agentId') agentId: string,
-    @Query('tenantId') tenantId?: string,
+    @Headers('X-Tenant-ID') tenantId?: string,
     @Query('checkpointId') checkpointId?: string
   ): Promise<PricingAgentCheckpoint> {
     this.logger.log(`Building agent: ${agentId} for tenant: ${tenantId}`);
@@ -381,17 +387,17 @@ export class BuilderController {
     }
   }
 
-  @Post('pricing-agents/:agentId/build/schema')
+  @Post('/:agentId/build/schema')
   @ApiOperation({ summary: 'Build schema only for pricing agent' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
-  @ApiQuery({ name: 'tenantId', description: 'Tenant ID', required: false })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
   @ApiQuery({ name: 'checkpointId', description: 'Checkpoint ID (optional, uses latest if not provided)', required: false })
   @ApiResponse({ status: 200, description: 'Schema built successfully', schema: { type: 'object', properties: { functionSchema: { type: 'string' } } } })
   @ApiResponse({ status: 404, description: 'Pricing agent or checkpoint not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async buildSchema(
     @Param('agentId') agentId: string,
-    @Query('tenantId') tenantId?: string,
+    @Headers('X-Tenant-ID') tenantId?: string,
     @Query('checkpointId') checkpointId?: string
   ): Promise<{functionSchema: string}> {
     this.logger.log(`Building schema for agent: ${agentId} for tenant: ${tenantId}`);
@@ -428,17 +434,17 @@ export class BuilderController {
     }
   }
 
-  @Post('pricing-agents/:agentId/build/formula')
+  @Post('/:agentId/build/formula')
   @ApiOperation({ summary: 'Build formula only for pricing agent' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
-  @ApiQuery({ name: 'tenantId', description: 'Tenant ID', required: false })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
   @ApiQuery({ name: 'checkpointId', description: 'Checkpoint ID (optional, uses latest if not provided)', required: false })
   @ApiResponse({ status: 200, description: 'Formula built successfully', type: PricingAgentCheckpoint })
   @ApiResponse({ status: 404, description: 'Pricing agent or checkpoint not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async buildFormula(
     @Param('agentId') agentId: string,
-    @Query('tenantId') tenantId?: string,
+    @Headers('X-Tenant-ID') tenantId?: string,
     @Query('checkpointId') checkpointId?: string
   ): Promise<PricingAgentCheckpoint> {
     this.logger.log(`Building formula for agent: ${agentId} for tenant: ${tenantId}`);
@@ -475,17 +481,17 @@ export class BuilderController {
     }
   }
 
-  @Get('pricing-agents/:agentId/checkpoints')
+  @Get('/:agentId/checkpoints')
   @ApiOperation({ summary: 'Get latest checkpoints for a pricing agent' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
-  @ApiQuery({ name: 'tenantId', description: 'Tenant ID', required: false })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
   @ApiQuery({ name: 'limit', description: 'Maximum number of checkpoints to return (default: 50)', required: false })
   @ApiResponse({ status: 200, description: 'Checkpoints retrieved successfully', type: [PricingAgentCheckpoint] })
   @ApiResponse({ status: 404, description: 'Pricing agent not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async getPricingAgentCheckpoints(
     @Param('agentId') agentId: string,
-    @Query('tenantId') tenantId?: string,
+    @Headers('X-Tenant-ID') tenantId?: string,
     @Query('limit') limit?: string
   ): Promise<PricingAgentCheckpoint[]> {
     this.logger.log(`Getting latest checkpoints for agent: ${agentId} for tenant: ${tenantId}`);
@@ -520,18 +526,18 @@ export class BuilderController {
     }
   }
 
-  @Get('pricing-agents/:agentId/checkpoints/:checkpointId')
+  @Get('/:agentId/checkpoints/:checkpointId')
   @ApiOperation({ summary: 'Get full checkpoint data by ID' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
   @ApiParam({ name: 'checkpointId', description: 'Checkpoint ID' })
-  @ApiQuery({ name: 'tenantId', description: 'Tenant ID', required: false })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
   @ApiResponse({ status: 200, description: 'Checkpoint retrieved successfully', type: PricingAgentCheckpoint })
   @ApiResponse({ status: 404, description: 'Pricing agent or checkpoint not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async getPricingAgentCheckpoint(
     @Param('agentId') agentId: string,
     @Param('checkpointId') checkpointId: string,
-    @Query('tenantId') tenantId?: string
+    @Headers('X-Tenant-ID') tenantId?: string
   ): Promise<PricingAgentCheckpoint> {
     this.logger.log(`Getting checkpoint: ${checkpointId} for agent: ${agentId} for tenant: ${tenantId}`);
 
@@ -565,6 +571,126 @@ export class BuilderController {
       }
       throw new HttpException(
         `Failed to get checkpoint: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post(':agentId/checkpoints/:checkpointId/datasets/:datasetId')
+  @ApiOperation({ summary: 'Assign a testing dataset to a pricing agent checkpoint' })
+  @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
+  @ApiParam({ name: 'datasetId', description: 'Testing dataset ID' })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
+  @ApiResponse({ status: 200, description: 'Testing dataset assigned successfully', type: AssignmentResultDto })
+  @ApiResponse({ status: 400, description: 'Bad request - dataset already assigned or invalid parameters' })
+  @ApiResponse({ status: 404, description: 'Pricing agent, checkpoint, or dataset not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async assignTestingDataset(
+    @Param('agentId') agentId: string,
+    @Param('datasetId') datasetId: string,
+    @Headers('X-Tenant-ID') tenantId?: string
+  ): Promise<AssignmentResultDto> {
+    this.logger.log(`Assigning testing dataset: ${datasetId} for agent: ${agentId} for tenant: ${tenantId}`);
+
+    try {
+      // Validate agent exists
+      const agent = await this.pricingAgentService.findOne(agentId, tenantId);
+      if (!agent) {
+        this.logger.warn(`Pricing agent not found: ${agentId} for tenant: ${tenantId}`);
+        throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
+      }
+
+      // Validate dataset exists
+      const dataset = await this.testingDatasetService.findOneTestingDataset(datasetId, tenantId);
+      if (!dataset) {
+        this.logger.warn(`Testing dataset not found: ${datasetId} for tenant: ${tenantId}`);
+        throw new HttpException('Testing dataset not found', HttpStatus.NOT_FOUND);
+      }
+
+      // Check if dataset is already assigned to this checkpoint
+      const existingAssignments = await this.testingDatasetService.findTestingDatasetAssignments(agentId, datasetId, tenantId);
+
+      if (existingAssignments.length > 0) {
+        this.logger.warn(`Testing dataset ${datasetId} is already assigned to agent ${agentId}`);
+        throw new HttpException('Testing dataset is already assigned to this checkpoint', HttpStatus.BAD_REQUEST);
+      }
+
+      await this.testingDatasetService.assignTestingDataset(agentId, datasetId, tenantId!);
+
+      this.logger.log(`Successfully assigned testing dataset: ${datasetId} to agent: ${agentId}`);
+      return {
+        agentId: agentId,
+        datasetId: dataset._id!.toString(),
+        tenantId: tenantId || '',
+        assignedAt: new Date(),
+        message: 'Testing dataset assigned successfully'
+      };
+    } catch (error) {
+      this.logger.error(`Failed to assign testing dataset ${datasetId} for agent ${agentId}: ${error.message}`, error.stack);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        `Failed to assign testing dataset: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post('pricing-agents/:agentId/build/dataset')
+  @ApiOperation({ summary: 'AI generate testing dataset' })
+  @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
+  @ApiQuery({ name: 'checkpointId', description: 'Checkpoint ID (optional, uses latest if not provided)', required: false })
+  @ApiResponse({ status: 200, description: 'Dataset generated successfully', type: TestingDatasetWithTestsDto })
+  @ApiResponse({ status: 404, description: 'Pricing agent or checkpoint not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async aiGenerateDataset(
+    @Param('agentId') agentId: string,
+    @Headers('X-Tenant-ID') tenantId?: string,
+    @Query('checkpointId') checkpointId?: string
+  ): Promise<TestingDatasetWithTestsDto> {
+    this.logger.log(`Building tests for agent: ${agentId} for tenant: ${tenantId}`);
+
+    try {
+      // If checkpointId is not provided, get the latest checkpoint for the agent
+      let targetCheckpointId = checkpointId;
+      if (!targetCheckpointId) {
+        const latestCheckpoint = await this.pricingAgentService.findLatestCheckpoint(agentId, tenantId);
+        if (!latestCheckpoint) {
+          this.logger.warn(`No checkpoint found for tests build: ${agentId} for tenant: ${tenantId}`);
+          throw new HttpException('No checkpoint found for the specified agent', HttpStatus.NOT_FOUND);
+        }
+        targetCheckpointId = latestCheckpoint._id!.toString();
+      }
+
+      const checkpoint = await this.pricingAgentService.findOneCheckpoint(targetCheckpointId, tenantId);
+      if (!checkpoint) {
+        this.logger.warn(`Checkpoint not found for tests build: ${agentId}, checkpoint: ${targetCheckpointId}`);
+        throw new HttpException('Checkpoint not found', HttpStatus.NOT_FOUND);
+      }
+
+      const agent = await this.pricingAgentService.findOne(agentId, tenantId);
+      if (!agent) {
+        this.logger.warn(`Pricing agent not found for tests build: ${agentId}`);
+        throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
+      }
+
+      const result = await this.testingDatasetService.aiGenerateDataset(checkpoint, agent.name);
+
+      this.logger.log(`Successfully built tests for agent: ${agentId}, checkpoint: ${checkpoint._id}`);
+
+      const dataset = await this.testingDatasetService.findOneTestingDatasetWithTests(result._id!.toString(), tenantId);
+      return dataset;
+    } catch (error) {
+      this.logger.error(`Failed to build tests for agent ${agentId}: ${error.message}`, error.stack);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        `Failed to build tests: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }

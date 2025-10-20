@@ -9,6 +9,108 @@ export enum TagEnum {
   NEW_PROMOTION = 'NEW_PROMOTION'
 }
 
+export enum LLMProvider {
+  OPENAI = 'openai',
+  ANTHROPIC = 'anthropic',
+  GOOGLE = 'google',
+  AZURE_OPENAI = 'azure-openai'
+}
+
+export class LLMConfiguration {
+  @ApiProperty({ enum: LLMProvider, enumName: 'LLMProvider' })
+  provider: LLMProvider;
+
+  @ApiProperty({ type: String })
+  model: string;
+
+  @ApiProperty({ type: String })
+  apiKey: string;
+
+  @ApiProperty({ type: String, required: false })
+  baseUrl?: string; // For custom endpoints like Azure OpenAI
+
+  @ApiProperty({ type: Object, required: false })
+  additionalConfig?: Record<string, any>; // For provider-specific configuration
+
+  @ApiProperty({ type: Boolean })
+  useByok: boolean;
+}
+
+export class Tenant {
+  @ApiProperty({ name: '_id', type: String, format: 'uuid' })
+  _id?: ObjectId;
+
+  @ApiProperty({ type: String })
+  name: string;
+
+  @ApiProperty({ type: String, required: false })
+  description?: string;
+
+  @ApiProperty({ type: Boolean, default: true })
+  isActive: boolean;
+
+  @ApiProperty({ type: LLMConfiguration, required: false })
+  builderLlmConfiguration?: LLMConfiguration;
+
+  @ApiProperty({ type: Date })
+  createdAt: Date;
+
+  @ApiProperty({ type: Date, required: false })
+  updatedAt?: Date;
+
+  @ApiProperty({ type: Date, required: false })
+  deletedAt?: Date | null;
+}
+
+export class User {
+  @ApiProperty({ name: '_id', type: String, format: 'uuid' })
+  _id?: ObjectId;
+
+  @ApiProperty({ type: String })
+  firebaseId: string; // Reference to Firebase user ID
+
+  @ApiProperty({ type: String })
+  email: string;
+
+  @ApiProperty({ type: String, required: false })
+  role?: string;
+
+  @ApiProperty({ type: String, required: false })
+  selectedTenantId?: string; // Currently selected tenant ID
+
+  @ApiProperty({ type: Boolean, default: true })
+  isActive: boolean;
+
+  @ApiProperty({ type: Date })
+  createdAt: Date;
+
+  @ApiProperty({ type: Date, required: false })
+  updatedAt?: Date;
+
+  @ApiProperty({ type: Date, required: false })
+  deletedAt?: Date | null;
+}
+
+export class UserTenant {
+  @ApiProperty({ name: '_id', type: String, format: 'uuid' })
+  _id?: ObjectId;
+
+  @ApiProperty({ type: String, format: 'uuid' })
+  userId: ObjectId;
+
+  @ApiProperty({ type: String, format: 'uuid' })
+  tenantId: ObjectId;
+
+  @ApiProperty({ type: String, enum: ['admin', 'member'], default: 'member' })
+  role: 'admin' | 'member'; // Role within the tenant
+
+  @ApiProperty({ type: Date })
+  assignedAt: Date;
+
+  @ApiProperty({ type: Date, required: false })
+  removedAt?: Date | null;
+}
+
 export class PricingAgentCheckpoint {
 
   @ApiProperty({ name: '_id', type: String, format: 'uuid' })

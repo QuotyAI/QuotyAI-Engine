@@ -1,15 +1,15 @@
 {
   "openapi": "3.0.0",
   "paths": {
-    "/builder/pricing-agents": {
+    "/pricing-agents": {
       "post": {
-        "operationId": "BuilderController_createPricingAgent",
+        "operationId": "PricingAgentsController_createPricingAgent",
         "parameters": [
           {
-            "name": "tenantId",
-            "required": true,
-            "in": "query",
-            "description": "Tenant ID",
+            "name": "X-Tenant-ID",
+            "required": false,
+            "in": "header",
+            "description": "Tenant ID (required in multi-tenant mode)",
             "schema": {
               "type": "string"
             }
@@ -45,17 +45,17 @@
         },
         "summary": "Create a new pricing agent",
         "tags": [
-          "builder"
+          "pricing-agents"
         ]
       },
       "get": {
-        "operationId": "BuilderController_getPricingAgents",
+        "operationId": "PricingAgentsController_getPricingAgents",
         "parameters": [
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
-            "description": "Tenant ID",
+            "in": "header",
+            "description": "Tenant ID (required in multi-tenant mode)",
             "schema": {
               "type": "string"
             }
@@ -75,19 +75,22 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request - tenantId required in multi-tenant mode"
+          },
           "500": {
             "description": "Internal server error"
           }
         },
         "summary": "Get all pricing agents for a tenant",
         "tags": [
-          "builder"
+          "pricing-agents"
         ]
       }
     },
-    "/builder/pricing-agents/{id}": {
+    "/pricing-agents/{id}": {
       "get": {
-        "operationId": "BuilderController_getPricingAgent",
+        "operationId": "PricingAgentsController_getPricingAgent",
         "parameters": [
           {
             "name": "id",
@@ -99,10 +102,10 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
-            "description": "Tenant ID",
+            "in": "header",
+            "description": "Tenant ID (required in multi-tenant mode)",
             "schema": {
               "type": "string"
             }
@@ -119,6 +122,9 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request - tenantId required in multi-tenant mode"
+          },
           "404": {
             "description": "Pricing agent not found"
           },
@@ -128,11 +134,11 @@
         },
         "summary": "Get a specific pricing agent by ID",
         "tags": [
-          "builder"
+          "pricing-agents"
         ]
       },
       "put": {
-        "operationId": "BuilderController_updatePricingAgent",
+        "operationId": "PricingAgentsController_updatePricingAgent",
         "parameters": [
           {
             "name": "id",
@@ -144,10 +150,10 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
-            "description": "Tenant ID",
+            "in": "header",
+            "description": "Tenant ID (required in multi-tenant mode)",
             "schema": {
               "type": "string"
             }
@@ -164,6 +170,9 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request - tenantId required in multi-tenant mode"
+          },
           "404": {
             "description": "Pricing agent not found"
           },
@@ -173,11 +182,11 @@
         },
         "summary": "Update a pricing agent",
         "tags": [
-          "builder"
+          "pricing-agents"
         ]
       },
       "delete": {
-        "operationId": "BuilderController_deletePricingAgent",
+        "operationId": "PricingAgentsController_deletePricingAgent",
         "parameters": [
           {
             "name": "id",
@@ -189,10 +198,10 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
-            "description": "Tenant ID",
+            "in": "header",
+            "description": "Tenant ID (required in multi-tenant mode)",
             "schema": {
               "type": "string"
             }
@@ -214,6 +223,9 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request - tenantId required in multi-tenant mode"
+          },
           "404": {
             "description": "Pricing agent not found"
           },
@@ -223,13 +235,13 @@
         },
         "summary": "Delete a pricing agent",
         "tags": [
-          "builder"
+          "pricing-agents"
         ]
       }
     },
-    "/builder/pricing-agents/{agentId}/messages": {
+    "/pricing-agents/{agentId}/messages": {
       "post": {
-        "operationId": "BuilderController_addInputMessage",
+        "operationId": "PricingAgentsController_addInputMessage",
         "parameters": [
           {
             "name": "agentId",
@@ -250,9 +262,9 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
+            "in": "header",
             "description": "Tenant ID",
             "schema": {
               "type": "string"
@@ -302,13 +314,13 @@
         },
         "summary": "Add input message to pricing agent",
         "tags": [
-          "builder"
+          "pricing-agents"
         ]
       }
     },
-    "/builder/pricing-agents/{agentId}/checkpoints/{checkpointId}/messages/{messageId}": {
+    "/pricing-agents/{agentId}/checkpoints/{checkpointId}/messages/{messageId}": {
       "delete": {
-        "operationId": "BuilderController_deleteInputMessage",
+        "operationId": "PricingAgentsController_deleteInputMessage",
         "parameters": [
           {
             "name": "agentId",
@@ -338,9 +350,9 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
+            "in": "header",
             "description": "Tenant ID",
             "schema": {
               "type": "string"
@@ -367,13 +379,13 @@
         },
         "summary": "Delete an input message from a checkpoint",
         "tags": [
-          "builder"
+          "pricing-agents"
         ]
       }
     },
-    "/builder/pricing-agents/{agentId}/build": {
+    "/pricing-agents/{agentId}/build": {
       "post": {
-        "operationId": "BuilderController_buildAgent",
+        "operationId": "PricingAgentsController_buildAgent",
         "parameters": [
           {
             "name": "agentId",
@@ -385,9 +397,9 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
+            "in": "header",
             "description": "Tenant ID",
             "schema": {
               "type": "string"
@@ -433,13 +445,13 @@
         },
         "summary": "Build a complete pricing agent with schema and formula",
         "tags": [
-          "builder"
+          "pricing-agents"
         ]
       }
     },
-    "/builder/pricing-agents/{agentId}/build/schema": {
+    "/pricing-agents/{agentId}/build/schema": {
       "post": {
-        "operationId": "BuilderController_buildSchema",
+        "operationId": "PricingAgentsController_buildSchema",
         "parameters": [
           {
             "name": "agentId",
@@ -451,9 +463,9 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
+            "in": "header",
             "description": "Tenant ID",
             "schema": {
               "type": "string"
@@ -497,13 +509,13 @@
         },
         "summary": "Build schema only for pricing agent",
         "tags": [
-          "builder"
+          "pricing-agents"
         ]
       }
     },
-    "/builder/pricing-agents/{agentId}/build/formula": {
+    "/pricing-agents/{agentId}/build/formula": {
       "post": {
-        "operationId": "BuilderController_buildFormula",
+        "operationId": "PricingAgentsController_buildFormula",
         "parameters": [
           {
             "name": "agentId",
@@ -515,9 +527,9 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
+            "in": "header",
             "description": "Tenant ID",
             "schema": {
               "type": "string"
@@ -563,13 +575,13 @@
         },
         "summary": "Build formula only for pricing agent",
         "tags": [
-          "builder"
+          "pricing-agents"
         ]
       }
     },
-    "/builder/pricing-agents/{agentId}/checkpoints": {
+    "/pricing-agents/{agentId}/checkpoints": {
       "get": {
-        "operationId": "BuilderController_getPricingAgentCheckpoints",
+        "operationId": "PricingAgentsController_getPricingAgentCheckpoints",
         "parameters": [
           {
             "name": "agentId",
@@ -581,9 +593,9 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
+            "in": "header",
             "description": "Tenant ID",
             "schema": {
               "type": "string"
@@ -622,13 +634,13 @@
         },
         "summary": "Get latest checkpoints for a pricing agent",
         "tags": [
-          "builder"
+          "pricing-agents"
         ]
       }
     },
-    "/builder/pricing-agents/{agentId}/checkpoints/{checkpointId}": {
+    "/pricing-agents/{agentId}/checkpoints/{checkpointId}": {
       "get": {
-        "operationId": "BuilderController_getPricingAgentCheckpoint",
+        "operationId": "PricingAgentsController_getPricingAgentCheckpoint",
         "parameters": [
           {
             "name": "agentId",
@@ -649,9 +661,9 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
+            "in": "header",
             "description": "Tenant ID",
             "schema": {
               "type": "string"
@@ -678,7 +690,142 @@
         },
         "summary": "Get full checkpoint data by ID",
         "tags": [
-          "builder"
+          "pricing-agents"
+        ]
+      }
+    },
+    "/pricing-agents/{agentId}/checkpoints/{checkpointId}/datasets/{datasetId}": {
+      "post": {
+        "operationId": "PricingAgentsController_assignTestingDataset",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "datasetId",
+            "required": true,
+            "in": "path",
+            "description": "Testing dataset ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Tenant-ID",
+            "required": false,
+            "in": "header",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Testing dataset assigned successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentResultDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - dataset already assigned or invalid parameters"
+          },
+          "404": {
+            "description": "Pricing agent, checkpoint, or dataset not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Assign a testing dataset to a pricing agent checkpoint",
+        "tags": [
+          "pricing-agents"
+        ]
+      }
+    },
+    "/pricing-agents/pricing-agents/{agentId}/build/dataset": {
+      "post": {
+        "operationId": "PricingAgentsController_aiGenerateDataset",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Tenant-ID",
+            "required": false,
+            "in": "header",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkpointId",
+            "required": false,
+            "in": "query",
+            "description": "Checkpoint ID (optional, uses latest if not provided)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dataset generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestingDatasetWithTestsDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestingDatasetWithTestsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "AI generate testing dataset",
+        "tags": [
+          "pricing-agents"
         ]
       }
     },
@@ -696,9 +843,9 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
+            "in": "header",
             "description": "Tenant ID",
             "schema": {
               "type": "string"
@@ -775,9 +922,9 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
+            "in": "header",
             "description": "Tenant ID",
             "schema": {
               "type": "string"
@@ -827,14 +974,14 @@
         ]
       }
     },
-    "/quality/testing-datasets": {
+    "/datasets": {
       "get": {
-        "operationId": "TestingDatasetController_findTestingDatasets",
+        "operationId": "DatasetsController_findTestingDatasets",
         "parameters": [
           {
-            "name": "tenantId",
-            "required": true,
-            "in": "query",
+            "name": "X-Tenant-ID",
+            "required": false,
+            "in": "header",
             "description": "Filter by tenant ID",
             "schema": {
               "type": "string"
@@ -900,22 +1047,32 @@
         },
         "summary": "Search testing datasets with flexible criteria",
         "tags": [
-          "quality"
+          "datasets"
         ]
       },
       "post": {
-        "operationId": "TestingDatasetController_createTestingDataset",
+        "operationId": "DatasetsController_createTestingDataset",
         "parameters": [
           {
-            "name": "tenantId",
-            "required": true,
-            "in": "query",
+            "name": "X-Tenant-ID",
+            "required": false,
+            "in": "header",
             "description": "Tenant ID",
             "schema": {
               "type": "string"
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTestingDatasetDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "Testing dataset created successfully",
@@ -936,13 +1093,13 @@
         },
         "summary": "Create a new testing dataset",
         "tags": [
-          "quality"
+          "datasets"
         ]
       }
     },
-    "/quality/testing-datasets/{id}": {
+    "/datasets/{id}": {
       "get": {
-        "operationId": "TestingDatasetController_getTestingDataset",
+        "operationId": "DatasetsController_getTestingDataset",
         "parameters": [
           {
             "name": "id",
@@ -954,9 +1111,9 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
+            "in": "header",
             "description": "Tenant ID",
             "schema": {
               "type": "string"
@@ -983,11 +1140,11 @@
         },
         "summary": "Get a specific testing dataset by ID",
         "tags": [
-          "quality"
+          "datasets"
         ]
       },
       "put": {
-        "operationId": "TestingDatasetController_updateTestingDataset",
+        "operationId": "DatasetsController_updateTestingDataset",
         "parameters": [
           {
             "name": "id",
@@ -999,9 +1156,9 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
+            "in": "header",
             "description": "Tenant ID",
             "schema": {
               "type": "string"
@@ -1028,11 +1185,11 @@
         },
         "summary": "Update a testing dataset",
         "tags": [
-          "quality"
+          "datasets"
         ]
       },
       "delete": {
-        "operationId": "TestingDatasetController_deleteTestingDataset",
+        "operationId": "DatasetsController_deleteTestingDataset",
         "parameters": [
           {
             "name": "id",
@@ -1044,9 +1201,9 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
+            "in": "header",
             "description": "Tenant ID",
             "schema": {
               "type": "string"
@@ -1078,13 +1235,13 @@
         },
         "summary": "Delete a testing dataset",
         "tags": [
-          "quality"
+          "datasets"
         ]
       }
     },
-    "/quality/testing-datasets/{id}/with-tests": {
+    "/datasets/{id}/with-tests": {
       "get": {
-        "operationId": "TestingDatasetController_getTestingDatasetWithTests",
+        "operationId": "DatasetsController_getTestingDatasetWithTests",
         "parameters": [
           {
             "name": "id",
@@ -1096,9 +1253,9 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
+            "in": "header",
             "description": "Tenant ID",
             "schema": {
               "type": "string"
@@ -1125,148 +1282,13 @@
         },
         "summary": "Get a specific testing dataset by ID with loaded tests",
         "tags": [
-          "quality"
+          "datasets"
         ]
       }
     },
-    "/quality/pricing-agents/{agentId}/checkpoints/{checkpointId}/datasets/{datasetId}": {
-      "post": {
-        "operationId": "TestingDatasetController_assignTestingDataset",
-        "parameters": [
-          {
-            "name": "agentId",
-            "required": true,
-            "in": "path",
-            "description": "Pricing agent ID",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "datasetId",
-            "required": true,
-            "in": "path",
-            "description": "Testing dataset ID",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tenantId",
-            "required": false,
-            "in": "query",
-            "description": "Tenant ID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Testing dataset assigned successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssignmentResultDto"
-                }
-              }
-            }
-          },
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssignmentResultDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request - dataset already assigned or invalid parameters"
-          },
-          "404": {
-            "description": "Pricing agent, checkpoint, or dataset not found"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "summary": "Assign a testing dataset to a pricing agent checkpoint",
-        "tags": [
-          "quality"
-        ]
-      }
-    },
-    "/quality/pricing-agents/{agentId}/build/dataset": {
-      "post": {
-        "operationId": "TestingDatasetController_aiGenerateDataset",
-        "parameters": [
-          {
-            "name": "agentId",
-            "required": true,
-            "in": "path",
-            "description": "Pricing agent ID",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tenantId",
-            "required": false,
-            "in": "query",
-            "description": "Tenant ID",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "checkpointId",
-            "required": false,
-            "in": "query",
-            "description": "Checkpoint ID (optional, uses latest if not provided)",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Dataset generated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TestingDatasetWithTestsDto"
-                }
-              }
-            }
-          },
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TestingDatasetWithTestsDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Pricing agent or checkpoint not found"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "summary": "AI generate testing dataset",
-        "tags": [
-          "quality"
-        ]
-      }
-    },
-    "/quality/pricing-agents/{agentId}/checkpoints/{checkpointId}/testset": {
+    "/testsets/{agentId}/{checkpointId}/testset": {
       "get": {
-        "operationId": "TestingDatasetController_getCheckpointTestset",
+        "operationId": "TestsetsController_getCheckpointTestset",
         "parameters": [
           {
             "name": "agentId",
@@ -1287,9 +1309,9 @@
             }
           },
           {
-            "name": "tenantId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
+            "in": "header",
             "description": "Tenant ID",
             "schema": {
               "type": "string"
@@ -1316,13 +1338,11 @@
         },
         "summary": "Get checkpoint testset with test data",
         "tags": [
-          "quality"
+          "testsets"
         ]
-      }
-    },
-    "/quality/pricing-agents/{agentId}/build/testset": {
+      },
       "post": {
-        "operationId": "TestingDatasetController_aiGenerateCheckpointTestsetFromAssignedDatasets",
+        "operationId": "TestsetsController_aiGenerateCheckpointTestsetFromAssignedDatasets",
         "parameters": [
           {
             "name": "agentId",
@@ -1334,19 +1354,19 @@
             }
           },
           {
-            "name": "tenantId",
-            "required": false,
-            "in": "query",
-            "description": "Tenant ID",
+            "name": "checkpointId",
+            "required": true,
+            "in": "path",
+            "description": "Checkpoint ID",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "checkpointId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
-            "description": "Checkpoint ID (optional, uses latest if not provided)",
+            "in": "header",
+            "description": "Tenant ID",
             "schema": {
               "type": "string"
             }
@@ -1385,13 +1405,13 @@
         },
         "summary": "AI generate testset from assigned datasets",
         "tags": [
-          "quality"
+          "testsets"
         ]
       }
     },
-    "/quality/pricing-agents/{agentId}/test": {
+    "/testsets/pricing-agents/{agentId}/test": {
       "post": {
-        "operationId": "TestingDatasetController_runCheckpointTestset",
+        "operationId": "TestsetsController_runCheckpointTestset",
         "parameters": [
           {
             "name": "agentId",
@@ -1403,19 +1423,19 @@
             }
           },
           {
-            "name": "tenantId",
-            "required": false,
-            "in": "query",
-            "description": "Tenant ID",
+            "name": "checkpointId",
+            "required": true,
+            "in": "path",
+            "description": "Checkpoint ID",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "checkpointId",
+            "name": "X-Tenant-ID",
             "required": false,
-            "in": "query",
-            "description": "Checkpoint ID (optional, uses latest if not provided)",
+            "in": "header",
+            "description": "Tenant ID",
             "schema": {
               "type": "string"
             }
@@ -1460,13 +1480,13 @@
         },
         "summary": "Runs checkpoint testset",
         "tags": [
-          "quality"
+          "testsets"
         ]
       }
     },
-    "/pricing-table-extraction/extract": {
+    "/extraction/extract": {
       "post": {
-        "operationId": "PricingTableExtractionController_extractPricingTable",
+        "operationId": "ExtractionController_extractPricingTable",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -1508,7 +1528,540 @@
         },
         "summary": "Extract pricing table from image",
         "tags": [
-          "pricing-table-extraction"
+          "extraction"
+        ]
+      }
+    },
+    "/user-tenants/tenants": {
+      "post": {
+        "operationId": "TenantController_createUserTenant",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tenant created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create a new tenant for user",
+        "tags": [
+          "User Tenants"
+        ]
+      },
+      "get": {
+        "operationId": "TenantController_getUserTenants",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of tenants for the authenticated user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get all tenants for the authenticated user",
+        "tags": [
+          "User Tenants"
+        ]
+      }
+    },
+    "/user-tenants/tenants/{id}": {
+      "get": {
+        "operationId": "TenantController_getUserTenantById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tenant not found"
+          }
+        },
+        "summary": "Get tenant by ID",
+        "tags": [
+          "User Tenants"
+        ]
+      },
+      "put": {
+        "operationId": "TenantController_updateUserTenant",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tenant updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update tenant",
+        "tags": [
+          "User Tenants"
+        ]
+      },
+      "delete": {
+        "operationId": "TenantController_deleteUserTenant",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Delete tenant (soft delete)",
+        "tags": [
+          "User Tenants"
+        ]
+      }
+    },
+    "/user-tenants/{tenantId}/users": {
+      "post": {
+        "operationId": "TenantController_assignUserToTenant",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignUserToTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User assigned to tenant successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserTenantDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Assign authenticated user to tenant",
+        "tags": [
+          "User Tenants"
+        ]
+      },
+      "delete": {
+        "operationId": "TenantController_removeUserFromTenant",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User removed from tenant successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Remove authenticated user from tenant",
+        "tags": [
+          "User Tenants"
+        ]
+      },
+      "get": {
+        "operationId": "TenantController_getTenantUsers",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of users in the tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get all users for a tenant",
+        "tags": [
+          "User Tenants"
+        ]
+      }
+    },
+    "/user-tenants/users/selected-tenant": {
+      "post": {
+        "operationId": "TenantController_updateSelectedTenant",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSelectedTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Selected tenant updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update selected tenant for authenticated user",
+        "tags": [
+          "User Tenants"
+        ]
+      }
+    },
+    "/auth/users": {
+      "post": {
+        "operationId": "AuthController_ensureUser",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User created or retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create or get user by Firebase ID",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/users/me": {
+      "get": {
+        "operationId": "AuthController_getCurrentUser",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Current user details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get current authenticated user",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The Health Check is successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {},
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The Health Check is not successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        },
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Health"
         ]
       }
     }
@@ -1630,7 +2183,6 @@
         },
         "required": [
           "pricingAgentId",
-          "tenantId",
           "version",
           "humanInputMessages",
           "createdAt",
@@ -1669,7 +2221,6 @@
           }
         },
         "required": [
-          "tenantId",
           "name",
           "createdAt"
         ]
@@ -1698,7 +2249,6 @@
           }
         },
         "required": [
-          "tenantId",
           "name",
           "createdAt"
         ]
@@ -1723,6 +2273,163 @@
             }
           }
         }
+      },
+      "AssignmentResultDto": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string"
+          },
+          "datasetId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "assignedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agentId",
+          "datasetId",
+          "tenantId",
+          "assignedAt",
+          "message"
+        ]
+      },
+      "HappyPathTestData": {
+        "type": "object",
+        "properties": {
+          "orderInputNaturalLanguage": {
+            "type": "string"
+          },
+          "expectedTotal": {
+            "type": "number"
+          },
+          "expectedTotalReasoning": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orderInputNaturalLanguage",
+          "expectedTotal",
+          "expectedTotalReasoning"
+        ]
+      },
+      "DatasetHappyPathTestData": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "testingDatasetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/HappyPathTestData"
+          }
+        },
+        "required": [
+          "testingDatasetId",
+          "data"
+        ]
+      },
+      "UnhappyPathTestData": {
+        "type": "object",
+        "properties": {
+          "orderInputNaturalLanguage": {
+            "type": "string"
+          },
+          "expectedErrorType": {
+            "type": "string",
+            "enum": [
+              "NOT_ENOUGH_DATA_TO_QUOTE",
+              "INCORRECT_ORDER_PARAMETER_VALUE",
+              "QUOTATION_RULE_VIOLATION"
+            ]
+          },
+          "expectedErrorReasoning": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orderInputNaturalLanguage",
+          "expectedErrorType",
+          "expectedErrorReasoning"
+        ]
+      },
+      "DatasetUnhappyPathTestData": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "testingDatasetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/UnhappyPathTestData"
+          }
+        },
+        "required": [
+          "testingDatasetId",
+          "data"
+        ]
+      },
+      "TestingDatasetWithTestsDto": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "happyPathTests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetHappyPathTestData"
+            }
+          },
+          "unhappyPathTests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetUnhappyPathTestData"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "createdAt"
+        ]
       },
       "ChatbotMessage": {
         "type": "object",
@@ -1888,125 +2595,17 @@
         },
         "required": [
           "name",
-          "tenantId",
           "createdAt"
         ]
       },
-      "HappyPathTestData": {
+      "CreateTestingDatasetDto": {
         "type": "object",
         "properties": {
-          "orderInputNaturalLanguage": {
-            "type": "string"
-          },
-          "expectedTotal": {
-            "type": "number"
-          },
-          "expectedTotalReasoning": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "orderInputNaturalLanguage",
-          "expectedTotal",
-          "expectedTotalReasoning"
-        ]
-      },
-      "DatasetHappyPathTestData": {
-        "type": "object",
-        "properties": {
-          "_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "testingDatasetId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "tenantId": {
-            "type": "string"
-          },
-          "data": {
-            "$ref": "#/components/schemas/HappyPathTestData"
-          }
-        },
-        "required": [
-          "testingDatasetId",
-          "tenantId",
-          "data"
-        ]
-      },
-      "UnhappyPathTestData": {
-        "type": "object",
-        "properties": {
-          "orderInputNaturalLanguage": {
-            "type": "string"
-          },
-          "expectedErrorType": {
-            "type": "string",
-            "enum": [
-              "NOT_ENOUGH_DATA_TO_QUOTE",
-              "INCORRECT_ORDER_PARAMETER_VALUE",
-              "QUOTATION_RULE_VIOLATION"
-            ]
-          },
-          "expectedErrorReasoning": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "orderInputNaturalLanguage",
-          "expectedErrorType",
-          "expectedErrorReasoning"
-        ]
-      },
-      "DatasetUnhappyPathTestData": {
-        "type": "object",
-        "properties": {
-          "_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "testingDatasetId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "tenantId": {
-            "type": "string"
-          },
-          "data": {
-            "$ref": "#/components/schemas/UnhappyPathTestData"
-          }
-        },
-        "required": [
-          "testingDatasetId",
-          "tenantId",
-          "data"
-        ]
-      },
-      "TestingDatasetWithTestsDto": {
-        "type": "object",
-        "properties": {
-          "_id": {
-            "type": "string",
-            "format": "uuid"
-          },
           "name": {
             "type": "string"
           },
           "description": {
             "type": "string"
-          },
-          "tenantId": {
-            "type": "string"
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "deletedAt": {
-            "format": "date-time",
-            "type": "string",
-            "nullable": true
           },
           "happyPathTests": {
             "type": "array",
@@ -2022,37 +2621,7 @@
           }
         },
         "required": [
-          "name",
-          "tenantId",
-          "createdAt"
-        ]
-      },
-      "AssignmentResultDto": {
-        "type": "object",
-        "properties": {
-          "agentId": {
-            "type": "string"
-          },
-          "datasetId": {
-            "type": "string"
-          },
-          "tenantId": {
-            "type": "string"
-          },
-          "assignedAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "agentId",
-          "datasetId",
-          "tenantId",
-          "assignedAt",
-          "message"
+          "name"
         ]
       },
       "TestResultDTO": {
@@ -2091,9 +2660,6 @@
             "type": "string",
             "format": "uuid"
           },
-          "tenantId": {
-            "type": "string"
-          },
           "createdAt": {
             "format": "date-time",
             "type": "string"
@@ -2112,7 +2678,6 @@
           "checkpointId",
           "datasetId",
           "datasetTestId",
-          "tenantId",
           "createdAt",
           "functionInputParams",
           "testData"
@@ -2137,9 +2702,6 @@
             "type": "string",
             "format": "uuid"
           },
-          "tenantId": {
-            "type": "string"
-          },
           "createdAt": {
             "format": "date-time",
             "type": "string"
@@ -2158,7 +2720,6 @@
           "checkpointId",
           "datasetId",
           "datasetTestId",
-          "tenantId",
           "createdAt",
           "functionInputParams",
           "testData"
@@ -2175,9 +2736,6 @@
             "type": "string",
             "format": "uuid"
           },
-          "tenantId": {
-            "type": "string"
-          },
           "happyPathTests": {
             "type": "array",
             "items": {
@@ -2192,8 +2750,7 @@
           }
         },
         "required": [
-          "checkpointId",
-          "tenantId"
+          "checkpointId"
         ]
       },
       "PricingTableExtractionRequest": {
@@ -2231,6 +2788,249 @@
           "markdown",
           "rawText",
           "confidence"
+        ]
+      },
+      "CreateTenantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "TenantDto": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "name",
+          "isActive",
+          "createdAt"
+        ]
+      },
+      "LLMConfigurationDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "anthropic",
+              "google",
+              "azure-openai"
+            ]
+          },
+          "model": {
+            "type": "string"
+          },
+          "apiKey": {
+            "type": "string"
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "additionalConfig": {
+            "type": "object"
+          },
+          "useByok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "provider",
+          "model",
+          "apiKey",
+          "useByok"
+        ]
+      },
+      "UpdateTenantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "builderLlmConfiguration": {
+            "$ref": "#/components/schemas/LLMConfigurationDto"
+          }
+        }
+      },
+      "SuccessResponseDto": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "AssignUserToTenantDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "object"
+          }
+        }
+      },
+      "UserTenantDto": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "member"
+            ],
+            "default": "member"
+          },
+          "assignedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "removedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "userId",
+          "tenantId",
+          "role",
+          "assignedAt"
+        ]
+      },
+      "UserDto": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "firebaseId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "selectedTenantId": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "firebaseId",
+          "email",
+          "isActive",
+          "createdAt"
+        ]
+      },
+      "UpdateSelectedTenantDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenantId"
+        ]
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "firebaseId": {
+            "type": "string",
+            "description": "Firebase user ID"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User email"
+          },
+          "role": {
+            "type": "string",
+            "description": "User role",
+            "default": "admin"
+          }
+        },
+        "required": [
+          "firebaseId",
+          "email"
         ]
       }
     }

@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatVertexAI } from '@langchain/google-vertexai';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { z } from 'zod';
-import { HumanInputMessage, TagEnum } from '../models/mongodb.model';
+import { LLMService, LLMServiceConfig } from './llm.service';
 
 export interface DemoConversationGenerationRequest {
   pricingAgentContext: string;
@@ -27,15 +28,13 @@ const DemoConversationSchema = z.object({
 
 @Injectable()
 export class AiDemoConversationAgentService {
-  private llm: ChatVertexAI;
   private readonly logger = new Logger(AiDemoConversationAgentService.name);
 
-  constructor() {
-    this.llm = new ChatVertexAI({ model: 'gemini-2.5-flash' });
-    this.logger.log('AiDemoConversationAgentService initialized with Gemini 2.5 Flash model');
+  constructor(private readonly llmService: LLMService) {
+    this.logger.log('AiDemoConversationAgentService initialized');
   }
 
-  async generateDemoConversation(request: DemoConversationGenerationRequest): Promise<DemoConversationGenerationResponse> {
+  async generateDemoConversation(request: DemoConversationGenerationRequest, llmConfig?: LLMServiceConfig): Promise<DemoConversationGenerationResponse> {
     this.logger.log(`Generating demo conversation for pricing agent`);
 
     try {
@@ -44,10 +43,13 @@ export class AiDemoConversationAgentService {
 
       this.logger.debug(`Prompt generated: ${prompt.systemPrompt.length} characters`);
 
+      // Get the LLM instance
+      const llm = await this.llmService.getLLM(llmConfig);
+
       // Generate the demo conversation
-      const result = await this.llm.invoke([
-        { role: 'system', content: prompt.systemPrompt },
-        { role: 'user', content: prompt.userMessage }
+      const result = await llm.invoke([
+        new SystemMessage(prompt.systemPrompt),
+        new HumanMessage(prompt.userMessage)
       ]);
 
       const llmResult = this.convertLlmOutputToSchema(result.content as string);

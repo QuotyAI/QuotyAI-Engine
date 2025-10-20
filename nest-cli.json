@@ -4,13 +4,8 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "assets": [
-      {
-        "include": "**/*.poml",
-        "outDir": "dist",
-        "watchAssets": true
-      }
-    ],
+    "webpack": false,
+    "tsConfigPath": "tsconfig.build.json",
     "plugins": [
       {
         "name": "@nestjs/swagger",

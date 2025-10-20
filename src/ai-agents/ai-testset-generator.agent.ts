@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatVertexAI } from '@langchain/google-vertexai';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 import { HappyPathTestData, UnhappyPathTestData, CheckpointHappyPathTestRun, CheckpointUnhappyPathTestRun, PricingAgentCheckpoint, DatasetHappyPathTestData, DatasetUnhappyPathTestData } from '../models/mongodb.model';
+import { LLMService, LLMServiceConfig } from './llm.service';
 
 export interface TypedOrderInputGenerationRequest {
   happyPathTests: DatasetHappyPathTestData[];
@@ -23,26 +25,27 @@ const TypedOrderInputSchema = z.object({
 
 @Injectable()
 export class AiTestsetGenerationAgentService {
-  private llm: ChatVertexAI;
   private readonly logger = new Logger(AiTestsetGenerationAgentService.name);
 
-  constructor() {
-    this.llm = new ChatVertexAI({ model: 'gemini-2.5-flash' });
-    this.logger.log('AiTestsetGenerationAgentService initialized with Gemini 2.5 Flash model');
+  constructor(private readonly llmService: LLMService) {
+    this.logger.log('AiTestsetGenerationAgentService initialized');
   }
 
-  async generateTypedOrderInputs(request: TypedOrderInputGenerationRequest): Promise<GeneratedTypedOrderInputs> {
+  async generateTypedOrderInputs(request: TypedOrderInputGenerationRequest, llmConfig?: LLMServiceConfig): Promise<GeneratedTypedOrderInputs> {
     this.logger.log(`Generating typed order inputs from test data`);
 
     try {
+      // Get the LLM instance
+      const llm = await this.llmService.getLLM(llmConfig);
+
       // Generate the prompt using the embedded template
       if (!request.checkpoint.functionSchema) {
         throw new Error('Function schema is required to generate typed order inputs');
       }
       const promptHappyPathTests = this.generatePrompt(request.happyPathTests.map(test => test.data.orderInputNaturalLanguage), request.checkpoint.functionSchema);
-      const rawLlmResultHappyPathTests = await this.llm.invoke([
-        { role: 'system', content: promptHappyPathTests.systemPrompt },
-        { role: 'user', content: promptHappyPathTests.userMessage }
+      const rawLlmResultHappyPathTests = await llm.invoke([
+        new SystemMessage(promptHappyPathTests.systemPrompt),
+        new HumanMessage(promptHappyPathTests.userMessage)
       ]);
       const llmResultHappyPathTests = this.convertLlmOutputToSchema(rawLlmResultHappyPathTests.content as string, request.happyPathTests.length);
       this.logger.log(`Successfully generated HappyPathTests`);
@@ -58,11 +61,11 @@ export class AiTestsetGenerationAgentService {
           createdAt: new Date(),
         });
       }
-      
+
       const promptUnhappyPathTests = this.generatePrompt(request.unhappyPathTests.map(test => test.data.orderInputNaturalLanguage), request.checkpoint.functionSchema);
-      const rawLlmResultUnhappyPathTests = await this.llm.invoke([
-        { role: 'system', content: promptUnhappyPathTests.systemPrompt },
-        { role: 'user', content: promptUnhappyPathTests.userMessage }
+      const rawLlmResultUnhappyPathTests = await llm.invoke([
+        new SystemMessage(promptUnhappyPathTests.systemPrompt),
+        new HumanMessage(promptUnhappyPathTests.userMessage)
       ]);
       const llmResultUnhappyPathTests = this.convertLlmOutputToSchema(rawLlmResultUnhappyPathTests.content as string, request.unhappyPathTests.length);
       this.logger.log(`Successfully generated UnhappyPathTests`);
@@ -78,7 +81,7 @@ export class AiTestsetGenerationAgentService {
           createdAt: new Date(),
         });
       }
-      
+
       this.logger.log(`Generated total ${happyPathTestRuns.length} happy path and ${unhappyPathTestRuns.length} unhappy path typed order inputs`);
       return { happyPathTestRuns, unhappyPathTestRuns };
     } catch (error) {

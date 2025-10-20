@@ -106,6 +106,7 @@ cp .env.example .env
 # - Database connection (MONGODB_URI)
 # - LLM API keys (OPENAI_API_KEY, etc.)
 # - Multi-tenancy settings (ENABLE_MULTI_TENANCY)
+# - Firebase service account path (FIREBASE_SERVICE_ACCOUNT_PATH)
 ```
 
 ### Running the Application
@@ -134,13 +135,38 @@ npm run test:e2e
 npm run test:cov
 ```
 
+## Authentication System
+
+The QuotyAI Engine features a flexible, provider-agnostic authentication system designed to support multiple authentication providers out of the box. This architecture allows businesses to integrate with their preferred identity management solutions without vendor lock-in.
+
+### Supported Providers
+- **Firebase Authentication**: Primary provider with full integration
+- **Supabase**: Planned support for Supabase Auth
+- **Auth0**: Planned support for Auth0 authentication
+- **Custom Providers**: Extensible architecture for additional providers
+
+### Key Features
+- **Provider Abstraction**: Clean interface for adding new auth providers
+- **Token Verification**: Secure JWT token validation across all providers
+- **User Management**: Unified user operations regardless of provider
+- **Multi-Tenant Support**: Authentication integrated with tenant isolation
+- **Role-Based Access**: Flexible permission system with admin/super-admin roles
+- **Multiple Auth Methods**: Frontend supports Google OAuth, GitHub OAuth, and email/password authentication
+
+### Architecture
+The auth system uses a provider pattern with:
+- `AuthProvider` interface for consistent provider implementations
+- `AuthService` for unified auth operations across providers
+- `AuthGuard` for route protection with automatic token verification
+- Provider-specific implementations (currently Firebase, extensible for others)
+
 ## Key Technologies
 
 - **NestJS**: Progressive Node.js framework for building efficient APIs
 - **MongoDB**: NoSQL database with native Node.js driver
 - **LangChain**: LLM framework for AI agent orchestration
 - **TypeScript**: Type-safe development with full IntelliSense support
-- **JWT**: Authentication and authorization
+- **Firebase Admin SDK**: Authentication and user management
 - **Swagger/OpenAPI**: API documentation and testing
 
 ## Security & Compliance

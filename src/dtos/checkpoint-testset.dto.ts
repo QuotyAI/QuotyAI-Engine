@@ -39,9 +39,6 @@ export class CheckpointHappyPathTestWithData {
   @ApiProperty({ name: 'datasetTestId', type: String, format: 'uuid' })
   datasetTestId: ObjectId;
 
-  @ApiProperty({ type: String })
-  tenantId: string;
-
   @ApiProperty({ type: Date })
   createdAt: Date;
 
@@ -68,9 +65,6 @@ export class CheckpointUnhappyPathTestWithData {
   @ApiProperty({ name: 'datasetTestId', type: String, format: 'uuid' })
   datasetTestId: ObjectId;
 
-  @ApiProperty({ type: String })
-  tenantId: string;
-
   @ApiProperty({ type: Date })
   createdAt: Date;
 
@@ -90,9 +84,6 @@ export class CheckpointTestsetDto {
 
   @ApiProperty({ type: String, format: 'uuid' })
   checkpointId: ObjectId;
-
-  @ApiProperty({ type: String })
-  tenantId: string;
 
   @ApiProperty({ type: [CheckpointHappyPathTestWithData] })
   happyPathTests?: CheckpointHappyPathTestWithData[];

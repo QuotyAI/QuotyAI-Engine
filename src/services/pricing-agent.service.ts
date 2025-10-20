@@ -1,6 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { Db } from 'mongodb';
-import { ObjectId } from 'mongodb';
+import { Db, ObjectId, Filter, Document } from 'mongodb';
 import { randomUUID } from 'crypto';
 import {
   PricingAgentCheckpoint,
@@ -12,7 +11,17 @@ import { AddHumanInputMessageDto } from '../dtos/add-input-message.dto';
 import { AiSchemaGenerationAgentService } from '../ai-agents/ai-schema-generation.agent';
 import { AiFormulaGenerationAgentService } from '../ai-agents/ai-formula-generation.agent';
 import { AiHappyPathDatasetGenerationAgentService } from '../ai-agents/ai-happy-path-dataset-generation.agent';
-import { isMultiTenancyEnabled, DEFAULT_TENANT_ID } from '../config/multi-tenancy.config';
+import { TenantService } from './tenant.service';
+import { LLMService, LLMServiceConfig } from '../ai-agents/llm.service';
+
+type PricingAgentFilter = Filter<PricingAgent>;
+type CheckpointFilter = Filter<PricingAgentCheckpoint>;
+type CheckpointMatchCondition = {
+  pricingAgentId: { $in: ObjectId[] };
+  deletedAt: null;
+  tenantId?: string;
+};
+type CheckpointMap = Map<string, PricingAgentCheckpoint>;
 
 @Injectable()
 export class PricingAgentService {
@@ -22,7 +31,9 @@ export class PricingAgentService {
     @Inject('DATABASE_CONNECTION') private db: Db,
     private readonly aiSchemaGenerationAgent: AiSchemaGenerationAgentService,
     private readonly aiFormulaGenerationAgent: AiFormulaGenerationAgentService,
-    private readonly aiHappyPathDatasetGenerationAgent: AiHappyPathDatasetGenerationAgentService
+    private readonly aiHappyPathDatasetGenerationAgent: AiHappyPathDatasetGenerationAgentService,
+    private readonly tenantService: TenantService,
+    private readonly llmService: LLMService,
   ) {
     this.logger.log('PricingAgentService initialized');
   }
@@ -33,6 +44,57 @@ export class PricingAgentService {
 
   private get checkpointCollection() {
     return this.db.collection<PricingAgentCheckpoint>('pricing-agent-checkpoints');
+  }
+
+  private buildPricingAgentFilter(tenantId?: string, additionalFilters: Partial<PricingAgentFilter> = {}): PricingAgentFilter {
+    const filter: PricingAgentFilter = { deletedAt: null, ...additionalFilters };
+    if (tenantId) {
+      filter.tenantId = tenantId;
+    }
+    return filter;
+  }
+
+  private buildCheckpointFilter(tenantId?: string, additionalFilters: Partial<CheckpointFilter> = {}): CheckpointFilter {
+    const filter: CheckpointFilter = { deletedAt: null, ...additionalFilters };
+    if (tenantId) {
+      filter.tenantId = tenantId;
+    }
+    return filter;
+  }
+
+  private extractPricingDescription(checkpoint: PricingAgentCheckpoint): string {
+    return checkpoint.humanInputMessages
+      .map(msg => msg.message || '')
+      .filter(msg => msg.trim())
+      .join('\n');
+  }
+
+  private async getTenantLLMConfig(tenantId?: string): Promise<LLMServiceConfig | undefined> {
+    if (!tenantId) {
+      return undefined; // Use default configuration
+    }
+
+    try {
+      const tenant = await this.tenantService.getTenantById(tenantId);
+      if (tenant?.builderLlmConfiguration) {
+        const validation = this.llmService.validateLLMConfig(tenant.builderLlmConfiguration);
+        if (validation.isValid) {
+          return {
+            provider: tenant.builderLlmConfiguration.provider,
+            model: tenant.builderLlmConfiguration.model,
+            apiKey: tenant.builderLlmConfiguration.apiKey,
+            baseUrl: tenant.builderLlmConfiguration.baseUrl,
+            additionalConfig: tenant.builderLlmConfiguration.additionalConfig,
+          };
+        } else {
+          this.logger.warn(`Invalid LLM configuration for tenant ${tenantId}: ${validation.errors.join(', ')}`);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Failed to get LLM configuration for tenant ${tenantId}: ${error.message}`);
+    }
+
+    return undefined; // Fall back to default configuration
   }
 
 
@@ -65,10 +127,7 @@ export class PricingAgentService {
     this.logger.log(`Finding all pricing agents for tenant: ${tenantId}`);
 
     try {
-      const effectiveTenantId = isMultiTenancyEnabled ? tenantId : DEFAULT_TENANT_ID;
-      const filter = isMultiTenancyEnabled
-        ? (effectiveTenantId ? { tenantId: effectiveTenantId, deletedAt: null } : { deletedAt: null })
-        : { deletedAt: null }; // No tenant filter in single-tenant mode
+      const filter = this.buildPricingAgentFilter(tenantId);
       const agents = await this.collection.find(filter).toArray();
 
       this.logger.log(`Successfully retrieved ${agents.length} pricing agents for tenant: ${tenantId}`);
@@ -83,10 +142,7 @@ export class PricingAgentService {
     this.logger.log(`Finding all pricing agents with latest checkpoints for tenant: ${tenantId}`);
 
     try {
-      const effectiveTenantId = isMultiTenancyEnabled ? tenantId : DEFAULT_TENANT_ID;
-      const filter = isMultiTenancyEnabled
-        ? (effectiveTenantId ? { tenantId: effectiveTenantId, deletedAt: null } : { deletedAt: null })
-        : { deletedAt: null }; // No tenant filter in single-tenant mode
+      const filter = this.buildPricingAgentFilter(tenantId);
       const agents = await this.collection.find(filter).toArray();
 
       if (agents.length === 0) {
@@ -98,12 +154,12 @@ export class PricingAgentService {
       const agentIds = agents.map(agent => agent._id!);
 
       // Fetch latest checkpoints for all agents in a single query
-      const matchCondition: any = {
+      const matchCondition: CheckpointMatchCondition = {
         pricingAgentId: { $in: agentIds },
         deletedAt: null
       };
-      if (isMultiTenancyEnabled && effectiveTenantId) {
-        matchCondition.tenantId = effectiveTenantId;
+      if (tenantId) {
+        matchCondition.tenantId = tenantId;
       }
 
       const latestCheckpoints = await this.db.collection('pricing-agent-checkpoints')
@@ -124,7 +180,7 @@ export class PricingAgentService {
         .toArray();
 
       // Create a map for quick lookup of checkpoints by agent ID
-      const checkpointMap = new Map<string, any>();
+      const checkpointMap: CheckpointMap = new Map();
       latestCheckpoints.forEach(item => {
         checkpointMap.set(item._id.toString(), item.latestCheckpoint);
       });
@@ -147,10 +203,7 @@ export class PricingAgentService {
     this.logger.log(`Finding pricing agent: ${id} for tenant: ${tenantId}`);
 
     try {
-      const filter = { _id: new ObjectId(id), deletedAt: null };
-      if (tenantId) {
-        filter['tenantId'] = tenantId;
-      }
+      const filter = this.buildPricingAgentFilter(tenantId, { _id: new ObjectId(id) });
       const agent = await this.collection.findOne(filter);
 
       if (agent) {
@@ -170,10 +223,7 @@ export class PricingAgentService {
     this.logger.log(`Updating pricing agent: ${id} for tenant: ${tenantId}`);
 
     try {
-      const filter = { _id: new ObjectId(id) };
-      if (tenantId) {
-        filter['tenantId'] = tenantId;
-      }
+      const filter = this.buildPricingAgentFilter(tenantId, { _id: new ObjectId(id) });
       await this.collection.updateOne(filter, { $set: updateData });
       const updatedAgent = await this.findOne(id, tenantId);
 
@@ -194,10 +244,7 @@ export class PricingAgentService {
     this.logger.log(`Soft deleting pricing agent: ${id} for tenant: ${tenantId}`);
 
     try {
-      const filter = { _id: new ObjectId(id) };
-      if (tenantId) {
-        filter['tenantId'] = tenantId;
-      }
+      const filter = this.buildPricingAgentFilter(tenantId, { _id: new ObjectId(id) });
       const result = await this.collection.updateOne(filter, { $set: { deletedAt: new Date() } });
       const deleted = result.modifiedCount > 0;
 
@@ -229,13 +276,11 @@ export class PricingAgentService {
   }
 
   async findAllCheckpoints(pricingAgentId?: string, tenantId?: string): Promise<PricingAgentCheckpoint[]> {
-    const filter: any = { deletedAt: null };
+    const additionalFilters: Partial<CheckpointFilter> = {};
     if (pricingAgentId) {
-      filter.pricingAgentId = new ObjectId(pricingAgentId);
+      additionalFilters.pricingAgentId = new ObjectId(pricingAgentId);
     }
-    if (tenantId) {
-      filter.tenantId = tenantId;
-    }
+    const filter = this.buildCheckpointFilter(tenantId, additionalFilters);
     return this.checkpointCollection.find(filter).sort({ version: 1 }).toArray();
   }
 
@@ -243,10 +288,7 @@ export class PricingAgentService {
     this.logger.log(`Finding latest ${limit} checkpoints for agent: ${pricingAgentId} for tenant: ${tenantId}`);
 
     try {
-      const filter: any = { pricingAgentId: new ObjectId(pricingAgentId), deletedAt: null };
-      if (tenantId) {
-        filter.tenantId = tenantId;
-      }
+      const filter = this.buildCheckpointFilter(tenantId, { pricingAgentId: new ObjectId(pricingAgentId) });
       const checkpoints = await this.checkpointCollection.find(filter).sort({ version: -1 }).limit(limit).toArray();
 
       this.logger.log(`Successfully retrieved ${checkpoints.length} latest checkpoints for agent: ${pricingAgentId}`);
@@ -258,35 +300,23 @@ export class PricingAgentService {
   }
 
   async findOneCheckpoint(id: string, tenantId?: string): Promise<PricingAgentCheckpoint | null> {
-    const filter = { _id: new ObjectId(id), deletedAt: null };
-    if (tenantId) {
-      filter['tenantId'] = tenantId;
-    }
+    const filter = this.buildCheckpointFilter(tenantId, { _id: new ObjectId(id) });
     return this.checkpointCollection.findOne(filter);
   }
 
   async findLatestCheckpoint(pricingAgentId: string, tenantId?: string): Promise<PricingAgentCheckpoint | null> {
-    const filter: any = { pricingAgentId: new ObjectId(pricingAgentId), deletedAt: null };
-    if (tenantId) {
-      filter.tenantId = tenantId;
-    }
+    const filter = this.buildCheckpointFilter(tenantId, { pricingAgentId: new ObjectId(pricingAgentId) });
     return this.checkpointCollection.find(filter).sort({ version: -1 }).limit(1).toArray().then(checkpoints => checkpoints[0] || null);
   }
 
   async updateCheckpoint(id: string, updateData: Partial<Omit<PricingAgentCheckpoint, '_id' | 'createdAt'>>, tenantId?: string): Promise<PricingAgentCheckpoint | null> {
-    const filter = { _id: new ObjectId(id) };
-    if (tenantId) {
-      filter['tenantId'] = tenantId;
-    }
+    const filter = this.buildCheckpointFilter(tenantId, { _id: new ObjectId(id) });
     await this.checkpointCollection.updateOne(filter, { $set: updateData });
     return this.findOneCheckpoint(id, tenantId);
   }
 
   async deleteCheckpoint(id: string, tenantId?: string): Promise<boolean> {
-    const filter = { _id: new ObjectId(id) };
-    if (tenantId) {
-      filter['tenantId'] = tenantId;
-    }
+    const filter = this.buildCheckpointFilter(tenantId, { _id: new ObjectId(id) });
     const result = await this.checkpointCollection.deleteOne(filter);
     return result.deletedCount > 0;
   }
@@ -358,14 +388,7 @@ export class PricingAgentService {
       return null; // Checkpoint not found
     }
 
-    // Combine all input messages into a pricing description
-    const pricingDescription = sourceCheckpoint.humanInputMessages
-      .map(msg => {
-        const parts: string[] = [];
-        if (msg.message) parts.push(msg.message);
-        return parts.join(' ');
-      })
-      .join('\n');
+    const pricingDescription = this.extractPricingDescription(sourceCheckpoint);
 
     if (!pricingDescription.trim()) {
       throw new Error('No input messages found to generate schema and function');
@@ -391,7 +414,7 @@ export class PricingAgentService {
 
     // TODO: Unhappy
 
-    throw new Error('Not implemented yet'); 
+    throw new Error('Not implemented yet');
   }
 
   async buildSchemaOnly(pricingAgentId: string, checkpointId: string, tenantId?: string): Promise<PricingAgentCheckpoint | null> {
@@ -400,23 +423,19 @@ export class PricingAgentService {
       return null; // Checkpoint not found
     }
 
-    // Combine all input messages into a pricing description
-    const pricingDescription = sourceCheckpoint.humanInputMessages
-      .map(msg => {
-        const parts: string[] = [];
-        if (msg.message) parts.push(msg.message);
-        return parts.join(' ');
-      })
-      .join('\n');
+    const pricingDescription = this.extractPricingDescription(sourceCheckpoint);
 
     if (!pricingDescription.trim()) {
       throw new Error('No input messages found to generate schema');
     }
 
+    // Get tenant's LLM configuration
+    const llmConfig = await this.getTenantLLMConfig(tenantId);
+
     // Generate only schema
     const schemaResult = await this.aiSchemaGenerationAgent.generateInputTypes({
       inputMessage: pricingDescription,
-    });
+    }, llmConfig);
 
     // Update existing checkpoint with generated schema only
     const updateData = {
@@ -432,24 +451,20 @@ export class PricingAgentService {
       return null; // Checkpoint not found
     }
 
-    // Combine all input messages into a pricing description
-    const pricingDescription = sourceCheckpoint.humanInputMessages
-      .map(msg => {
-        const parts: string[] = [];
-        if (msg.message) parts.push(msg.message);
-        return parts.join(' ');
-      })
-      .join('\n');
+    const pricingDescription = this.extractPricingDescription(sourceCheckpoint);
 
     if (!pricingDescription.trim()) {
       throw new Error('No input messages found to generate function');
     }
 
+    // Get tenant's LLM configuration
+    const llmConfig = await this.getTenantLLMConfig(tenantId);
+
     // Generate only function
     const functionResult = await this.aiFormulaGenerationAgent.generatePricingFunction({
       pricingDescription: pricingDescription,
       schema: sourceCheckpoint.functionSchema || '',
-    });
+    }, llmConfig);
 
     // Update existing checkpoint with generated function only
     const updateData = {

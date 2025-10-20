@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatVertexAI } from '@langchain/google-vertexai';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { z } from 'zod';
+import { LLMService, LLMServiceConfig } from './llm.service';
 
 export interface OrderConversionRequest {
   conversationHistory: Array<{
@@ -21,15 +23,13 @@ const OrderConversionSchema = z.object({
 
 @Injectable()
 export class AiOrderConversionAgentService {
-  private llm: ChatVertexAI;
   private readonly logger = new Logger(AiOrderConversionAgentService.name);
 
-  constructor() {
-    this.llm = new ChatVertexAI({ model: 'gemini-2.5-flash' });
-    this.logger.log('AiOrderConversionAgentService initialized with Gemini 2.5 Flash model');
+  constructor(private readonly llmService: LLMService) {
+    this.logger.log('AiOrderConversionAgentService initialized');
   }
 
-  async convertOrder(request: OrderConversionRequest): Promise<OrderConversionResponse> {
+  async convertOrder(request: OrderConversionRequest, llmConfig?: LLMServiceConfig): Promise<OrderConversionResponse> {
     this.logger.log(`Converting conversation to structured format`);
 
     try {
@@ -39,10 +39,13 @@ export class AiOrderConversionAgentService {
 
       this.logger.debug(`Prompt generated: ${systemPrompt.length + userMessage.length} characters`);
 
+      // Get the LLM instance
+      const llm = await this.llmService.getLLM(llmConfig);
+
       // Generate the structured order as JSON
-      const result = await this.llm.invoke([
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage }
+      const result = await llm.invoke([
+        new SystemMessage(systemPrompt),
+        new HumanMessage(userMessage)
       ]);
 
       const llmResult = this.convertLlmOutputToSchema(result.content as string);

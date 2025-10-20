@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatVertexAI } from '@langchain/google-vertexai';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { HumanMessage } from '@langchain/core/messages';
 import { UnhappyPathTestData, ExpectedErrorType } from 'src/models/mongodb.model';
 import { z } from 'zod';
+import { LLMService, LLMServiceConfig } from './llm.service';
 
 const UnhappyPathTestDataSchema = z.object({
   tests: z.array(z.object({
@@ -13,15 +15,13 @@ const UnhappyPathTestDataSchema = z.object({
 
 @Injectable()
 export class AiUnhappyPathDatasetGenerationAgentService {
-  private llm: ChatVertexAI;
   private readonly logger = new Logger(AiUnhappyPathDatasetGenerationAgentService.name);
 
-  constructor() {
-    this.llm = new ChatVertexAI({ model: 'gemini-2.5-flash' });
-    this.logger.log('AiUnhappyPathTestsGenerationAgentService initialized with Gemini 2.5 Flash model');
+  constructor(private readonly llmService: LLMService) {
+    this.logger.log('AiUnhappyPathDatasetGenerationAgentService initialized');
   }
 
-  async generateUnhappyPathScenarios(pricingInNaturalLanguage: string, inputOrderSchema: string, formulaFunctionCode: string): Promise<UnhappyPathTestData[]> {
+  async generateUnhappyPathScenarios(pricingInNaturalLanguage: string, inputOrderSchema: string, formulaFunctionCode: string, llmConfig?: LLMServiceConfig): Promise<UnhappyPathTestData[]> {
     this.logger.log(`Generating unhappy path test scenarios for pricing function`);
 
     try {
@@ -30,8 +30,11 @@ export class AiUnhappyPathDatasetGenerationAgentService {
 
       this.logger.debug(`Prompt generated: ${prompt.length} characters`);
 
+      // Get the LLM instance
+      const llm = await this.llmService.getLLM(llmConfig);
+
       // Generate the test scenarios as JSON
-      const result = await this.llm.withStructuredOutput(UnhappyPathTestDataSchema, { method: 'functionCalling' }).invoke(prompt);
+      const result = await llm.withStructuredOutput(UnhappyPathTestDataSchema, { method: 'functionCalling' }).invoke([new HumanMessage(prompt)]);
       this.logger.log(`Successfully generated unhappy path test scenarios`);
 
       // The result is already the parsed array

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatVertexAI } from '@langchain/google-vertexai';
+import { HumanMessage } from '@langchain/core/messages';
+import { LLMService, LLMServiceConfig } from './llm.service';
 
 export interface SchemaGenerationRequest {
   inputMessage: string;
@@ -11,15 +12,13 @@ export interface GeneratedSchema {
 
 @Injectable()
 export class AiSchemaGenerationAgentService {
-  private llm: ChatVertexAI;
   private readonly logger = new Logger(AiSchemaGenerationAgentService.name);
 
-  constructor() {
-    this.llm = new ChatVertexAI({ model: 'gemini-2.5-flash' });
-    this.logger.log('SchemaAgentService initialized with Gemini 2.5 Flash model');
+  constructor(private readonly llmService: LLMService) {
+    this.logger.log('AiSchemaGenerationAgentService initialized');
   }
 
-  async generateInputTypes(request: SchemaGenerationRequest): Promise<GeneratedSchema> {
+  async generateInputTypes(request: SchemaGenerationRequest, llmConfig?: LLMServiceConfig): Promise<GeneratedSchema> {
     this.logger.log(`Generating input types`);
 
     try {
@@ -28,8 +27,11 @@ export class AiSchemaGenerationAgentService {
 
       this.logger.debug(`Prompt generated: ${prompt.length} characters`);
 
+      // Get the LLM instance
+      const llm = await this.llmService.getLLM(llmConfig);
+
       // Generate the TypeScript types
-      const result = await this.llm.invoke(prompt);
+      const result = await llm.invoke([new HumanMessage(prompt)]);
 
       const generatedCode = (result.content as string).replace(/^\s*```typescript\s*|\s*```\s*$/g, '').trim();
       this.logger.log(`Successfully generated input types code (${generatedCode.length} characters)`);

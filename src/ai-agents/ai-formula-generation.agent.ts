@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatVertexAI } from '@langchain/google-vertexai';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { SystemMessage, HumanMessage } from '@langchain/core/messages';
+import { LLMService, LLMServiceConfig } from './llm.service';
 
 export interface FunctionGenerationRequest {
   pricingDescription: string;
@@ -12,15 +14,13 @@ export interface GeneratedFunction {
 
 @Injectable()
 export class AiFormulaGenerationAgentService {
-  private llm: ChatVertexAI;
   private readonly logger = new Logger(AiFormulaGenerationAgentService.name);
 
-  constructor() {
-    this.llm = new ChatVertexAI({ model: 'gemini-2.5-flash' });
-    this.logger.log('FunctionAgentService initialized with Gemini 2.5 Flash model');
+  constructor(private readonly llmService: LLMService) {
+    this.logger.log('AiFormulaGenerationAgentService initialized');
   }
 
-  async generatePricingFunction(request: FunctionGenerationRequest): Promise<GeneratedFunction> {
+  async generatePricingFunction(request: FunctionGenerationRequest, llmConfig?: LLMServiceConfig): Promise<GeneratedFunction> {
     this.logger.log(`Generating pricing function`);
 
     try {
@@ -29,10 +29,13 @@ export class AiFormulaGenerationAgentService {
 
       this.logger.debug(`Prompt generated: system prompt ${prompt.systemPrompt.length} characters, user message ${prompt.userMessage.length} characters`);
 
+      // Get the LLM instance
+      const llm = await this.llmService.getLLM(llmConfig);
+
       // Generate the TypeScript function
-      const result = await this.llm.invoke([
-        { role: 'system', content: prompt.systemPrompt },
-        { role: 'user', content: prompt.userMessage }
+      const result = await llm.invoke([
+        new SystemMessage(prompt.systemPrompt),
+        new HumanMessage(prompt.userMessage)
       ]);
 
       const generatedCode = (result.content as string).replace(/^\s*```typescript\s*|\s*```\s*$/g, '').replaceAll("import { z } from 'zod';", '').trim();

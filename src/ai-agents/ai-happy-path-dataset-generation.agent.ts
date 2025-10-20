@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatVertexAI } from '@langchain/google-vertexai';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { HumanMessage } from '@langchain/core/messages';
 import { HappyPathTestData } from 'src/models/mongodb.model';
 import { z } from 'zod';
+import { LLMService, LLMServiceConfig } from './llm.service';
 
 const HappyPathTestDataSchema = z.object({
   tests: z.array(z.object({
@@ -13,15 +15,13 @@ const HappyPathTestDataSchema = z.object({
 
 @Injectable()
 export class AiHappyPathDatasetGenerationAgentService {
-  private llm: ChatVertexAI;
   private readonly logger = new Logger(AiHappyPathDatasetGenerationAgentService.name);
 
-  constructor() {
-    this.llm = new ChatVertexAI({ model: 'gemini-2.5-flash' });
-    this.logger.log('TestGenerationAgentService initialized with Gemini 2.5 Flash model');
+  constructor(private readonly llmService: LLMService) {
+    this.logger.log('AiHappyPathDatasetGenerationAgentService initialized');
   }
 
-  async generateHappyPathScenarios(pricingInNaturalLanguage: string, inputOrderSchema: string, formulaFunctionCode: string): Promise<HappyPathTestData[]> {
+  async generateHappyPathScenarios(pricingInNaturalLanguage: string, inputOrderSchema: string, formulaFunctionCode: string, llmConfig?: LLMServiceConfig): Promise<HappyPathTestData[]> {
     this.logger.log(`Generating test scenarios for pricing function`);
 
     try {
@@ -30,8 +30,11 @@ export class AiHappyPathDatasetGenerationAgentService {
 
       this.logger.debug(`Prompt generated: ${prompt.length} characters`);
 
+      // Get the LLM instance
+      const llm = await this.llmService.getLLM(llmConfig);
+
       // Generate the test scenarios as JSON
-      const result = await this.llm.withStructuredOutput(HappyPathTestDataSchema, { method: 'functionCalling' }).invoke(prompt);
+      const result = await llm.withStructuredOutput(HappyPathTestDataSchema, { method: 'functionCalling' }).invoke([new HumanMessage(prompt)]);
       this.logger.log(`Successfully generated test scenarios`);
       return result.tests;
     } catch (error) {

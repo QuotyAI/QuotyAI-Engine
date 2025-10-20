@@ -13,6 +13,9 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
+  // Enable shutdown hooks for graceful shutdown
+  app.enableShutdownHooks();
+
   // Enable global validation pipes
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,

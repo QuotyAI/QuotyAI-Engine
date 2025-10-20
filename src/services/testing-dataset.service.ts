@@ -1,6 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { Db } from 'mongodb';
-import { ObjectId } from 'mongodb';
+import { Db, ObjectId, Filter } from 'mongodb';
 import {
   TestingDataset,
   TestingDatasetAssignment,
@@ -16,6 +15,20 @@ import { AiUnhappyPathDatasetGenerationAgentService } from 'src/ai-agents/ai-unh
 import { AiTestsetGenerationAgentService } from '../ai-agents/ai-testset-generator.agent';
 import { DynamicRunnerService } from './dynamic-runner.service';
 import { TestingDatasetWithTestsDto } from 'src/dtos/testing-dataset-with-tests.dto';
+
+type TestingDatasetFilter = Filter<TestingDataset>;
+type TestingDatasetAssignmentFilter = Filter<TestingDatasetAssignment>;
+type DatasetHappyPathTestFilter = Filter<DatasetHappyPathTestData>;
+type DatasetUnhappyPathTestFilter = Filter<DatasetUnhappyPathTestData>;
+type CheckpointHappyPathTestFilter = Filter<CheckpointHappyPathTestRun>;
+type CheckpointUnhappyPathTestFilter = Filter<CheckpointUnhappyPathTestRun>;
+type SearchCriteria = {
+  checkpointId?: string;
+  tenantId?: string;
+  name?: string;
+  description?: string;
+  limit?: number;
+};
 
 @Injectable()
 export class TestingDatasetService {
@@ -55,6 +68,61 @@ export class TestingDatasetService {
     return this.db.collection<TestingDatasetAssignment>('testing-dataset-assignments');
   }
 
+  private buildTestingDatasetFilter(tenantId?: string, additionalFilters: Partial<TestingDatasetFilter> = {}): TestingDatasetFilter {
+    const filter: TestingDatasetFilter = { deletedAt: null, ...additionalFilters };
+    if (tenantId) {
+      filter.tenantId = tenantId;
+    }
+    return filter;
+  }
+
+  private buildTestingDatasetAssignmentFilter(tenantId?: string, additionalFilters: Partial<TestingDatasetAssignmentFilter> = {}): TestingDatasetAssignmentFilter {
+    const filter: TestingDatasetAssignmentFilter = { ...additionalFilters };
+    if (tenantId) {
+      filter.tenantId = tenantId;
+    }
+    return filter;
+  }
+
+  private buildDatasetHappyPathTestFilter(tenantId?: string, additionalFilters: Partial<DatasetHappyPathTestFilter> = {}): DatasetHappyPathTestFilter {
+    const filter: DatasetHappyPathTestFilter = { deletedAt: null, ...additionalFilters };
+    if (tenantId) {
+      filter.tenantId = tenantId;
+    }
+    return filter;
+  }
+
+  private buildDatasetUnhappyPathTestFilter(tenantId?: string, additionalFilters: Partial<DatasetUnhappyPathTestFilter> = {}): DatasetUnhappyPathTestFilter {
+    const filter: DatasetUnhappyPathTestFilter = { deletedAt: null, ...additionalFilters };
+    if (tenantId) {
+      filter.tenantId = tenantId;
+    }
+    return filter;
+  }
+
+  private buildCheckpointHappyPathTestFilter(tenantId?: string, additionalFilters: Partial<CheckpointHappyPathTestFilter> = {}): CheckpointHappyPathTestFilter {
+    const filter: CheckpointHappyPathTestFilter = { deletedAt: null, ...additionalFilters };
+    if (tenantId) {
+      filter.tenantId = tenantId;
+    }
+    return filter;
+  }
+
+  private buildCheckpointUnhappyPathTestFilter(tenantId?: string, additionalFilters: Partial<CheckpointUnhappyPathTestFilter> = {}): CheckpointUnhappyPathTestFilter {
+    const filter: CheckpointUnhappyPathTestFilter = { deletedAt: null, ...additionalFilters };
+    if (tenantId) {
+      filter.tenantId = tenantId;
+    }
+    return filter;
+  }
+
+  private extractPricingDescription(checkpoint: PricingAgentCheckpoint): string {
+    return checkpoint.humanInputMessages
+      .map(msg => msg.message || '')
+      .filter(msg => msg.trim())
+      .join('\n');
+  }
+
   async aiGenerateDataset(checkpoint: PricingAgentCheckpoint, agentName: string): Promise<TestingDataset> {
     this.logger.log(`AI generating checkpoint dataset for checkpoint: ${checkpoint._id}`);
 
@@ -62,14 +130,7 @@ export class TestingDatasetService {
       throw new Error('Checkpoint must have both functionSchema and functionCode to generate tests');
     }
 
-    // Combine all input messages into a pricing description
-    const pricingDescription = checkpoint.humanInputMessages
-      .map(msg => {
-        const parts: string[] = [];
-        if (msg.message) parts.push(msg.message);
-        return parts.join(' ');
-      })
-      .join('\n');
+    const pricingDescription = this.extractPricingDescription(checkpoint);
 
     if (!pricingDescription.trim()) {
       throw new Error('No input messages found to generate tests');
@@ -137,24 +198,19 @@ export class TestingDatasetService {
     return createdDataset;
   }
 
-  async findTestingDatasets(searchCriteria: {
-    checkpointId?: string;
-    tenantId?: string;
-    name?: string;
-    description?: string;
-    limit?: number;
-  }): Promise<TestingDataset[]> {
+  async findTestingDatasets(searchCriteria: SearchCriteria): Promise<TestingDataset[]> {
     this.logger.log(`Finding testing datasets with criteria:`, searchCriteria);
 
     try {
-      const filter: any = { deletedAt: null };
+      let filter: TestingDatasetFilter;
 
       // If checkpointId is provided, get datasets assigned to that checkpoint
       if (searchCriteria.checkpointId) {
-        const assignments = await this.testingDatasetAssignmentCollection.find({
-          pricingAgentId: new ObjectId(searchCriteria.checkpointId),
-          tenantId: searchCriteria.tenantId,
-        }).toArray();
+        const assignments = await this.testingDatasetAssignmentCollection.find(
+          this.buildTestingDatasetAssignmentFilter(searchCriteria.tenantId, {
+            pricingAgentId: new ObjectId(searchCriteria.checkpointId)
+          })
+        ).toArray();
 
         if (assignments.length === 0) {
           this.logger.log(`No assigned testing datasets for agent: ${searchCriteria.checkpointId}`);
@@ -163,20 +219,18 @@ export class TestingDatasetService {
 
         // Get all testing dataset IDs from assignments
         const datasetIds = assignments.map(assignment => assignment.testingDatasetId);
-        filter._id = { $in: datasetIds };
+        filter = this.buildTestingDatasetFilter(searchCriteria.tenantId, { _id: { $in: datasetIds } });
+      } else {
+        filter = this.buildTestingDatasetFilter(searchCriteria.tenantId);
       }
 
       // Add other search criteria
-      if (searchCriteria.tenantId) {
-        filter.tenantId = searchCriteria.tenantId;
-      }
-
       if (searchCriteria.name) {
-        filter.name = { $regex: searchCriteria.name, $options: 'i' }; // Case-insensitive search
+        filter = { ...filter, name: { $regex: searchCriteria.name, $options: 'i' } };
       }
 
       if (searchCriteria.description) {
-        filter.description = { $regex: searchCriteria.description, $options: 'i' }; // Case-insensitive search
+        filter = { ...filter, description: { $regex: searchCriteria.description, $options: 'i' } };
       }
 
       let query = this.testingDatasetCollection.find(filter);
@@ -225,10 +279,7 @@ export class TestingDatasetService {
     this.logger.log(`Finding testing dataset: ${id} for tenant: ${tenantId}`);
 
     try {
-      const filter = { _id: new ObjectId(id), deletedAt: null };
-      if (tenantId) {
-        filter['tenantId'] = tenantId;
-      }
+      const filter = this.buildTestingDatasetFilter(tenantId, { _id: new ObjectId(id) });
       const dataset = await this.testingDatasetCollection.findOne(filter);
 
       if (dataset) {
@@ -248,11 +299,7 @@ export class TestingDatasetService {
     this.logger.log(`Finding testing dataset with tests: ${id} for tenant: ${tenantId}`);
 
     try {
-      const filter = { _id: new ObjectId(id), deletedAt: null };
-      if (tenantId) {
-        filter['tenantId'] = tenantId;
-      }
-      const dataset = await this.testingDatasetCollection.findOne(filter);
+      const dataset = await this.findOneTestingDataset(id, tenantId);
 
       if (!dataset) {
         this.logger.warn(`Testing dataset not found: ${id} for tenant: ${tenantId}`);
@@ -260,18 +307,14 @@ export class TestingDatasetService {
       }
 
       // Fetch happy path tests
-      const happyPathTests = await this.datasetHappyPathTestCollection.find({
-        testingDatasetId: new ObjectId(id),
-        tenantId: tenantId || '',
-        deletedAt: null
-      }).toArray();
+      const happyPathTests = await this.datasetHappyPathTestCollection.find(
+        this.buildDatasetHappyPathTestFilter(tenantId, { testingDatasetId: new ObjectId(id) })
+      ).toArray();
 
       // Fetch unhappy path tests
-      const unhappyPathTests = await this.datasetUnhappyPathTestCollection.find({
-        testingDatasetId: new ObjectId(id),
-        tenantId: tenantId || '',
-        deletedAt: null
-      }).toArray();
+      const unhappyPathTests = await this.datasetUnhappyPathTestCollection.find(
+        this.buildDatasetUnhappyPathTestFilter(tenantId, { testingDatasetId: new ObjectId(id) })
+      ).toArray();
 
       const result: TestingDatasetWithTestsDto = {
         ...dataset,
@@ -292,10 +335,7 @@ export class TestingDatasetService {
     this.logger.log(`Updating testing dataset: ${id} for tenant: ${tenantId}`);
 
     try {
-      const filter = { _id: new ObjectId(id) };
-      if (tenantId) {
-        filter['tenantId'] = tenantId;
-      }
+      const filter = this.buildTestingDatasetFilter(tenantId, { _id: new ObjectId(id) });
       await this.testingDatasetCollection.updateOne(filter, { $set: updateData });
       const updatedDataset = await this.findOneTestingDataset(id, tenantId);
 
@@ -316,10 +356,7 @@ export class TestingDatasetService {
     this.logger.log(`Soft deleting testing dataset: ${id} for tenant: ${tenantId}`);
 
     try {
-      const filter = { _id: new ObjectId(id) };
-      if (tenantId) {
-        filter['tenantId'] = tenantId;
-      }
+      const filter = this.buildTestingDatasetFilter(tenantId, { _id: new ObjectId(id) });
       const result = await this.testingDatasetCollection.updateOne(filter, { $set: { deletedAt: new Date() } });
       const deleted = result.modifiedCount > 0;
 
@@ -345,10 +382,11 @@ export class TestingDatasetService {
       }
 
       // Get all assigned testing datasets from the separate collection
-      const assignments = await this.testingDatasetAssignmentCollection.find({
-        pricingAgentId: checkpoint.pricingAgentId,
-        tenantId: checkpoint.tenantId,
-      }).toArray();
+      const assignments = await this.testingDatasetAssignmentCollection.find(
+        this.buildTestingDatasetAssignmentFilter(checkpoint.tenantId, {
+          pricingAgentId: checkpoint.pricingAgentId
+        })
+      ).toArray();
 
       if (assignments.length === 0) {
         throw new Error('Checkpoint must have assigned testing datasets to generate testset from');
@@ -356,28 +394,22 @@ export class TestingDatasetService {
 
       // Get all assigned testing datasets
       const assignedDatasetIds = assignments.map(assignment => assignment.testingDatasetId);
-      const assignedDatasets = await this.testingDatasetCollection.find({
-        _id: { $in: assignedDatasetIds },
-        deletedAt: null,
-        tenantId: checkpoint.tenantId,
-      }).toArray();
+      const assignedDatasets = await this.testingDatasetCollection.find(
+        this.buildTestingDatasetFilter(checkpoint.tenantId, { _id: { $in: assignedDatasetIds } })
+      ).toArray();
 
       if (assignedDatasets.length === 0) {
         throw new Error('No assigned testing datasets found');
       }
 
       // Fetch all the test data in bulk from assigned datasets
-      const datasetHappyPathTests = await this.datasetHappyPathTestCollection.find({
-        testingDatasetId: { $in: assignedDatasetIds },
-        deletedAt: null,
-        tenantId: checkpoint.tenantId,
-      }).toArray();
+      const datasetHappyPathTests = await this.datasetHappyPathTestCollection.find(
+        this.buildDatasetHappyPathTestFilter(checkpoint.tenantId, { testingDatasetId: { $in: assignedDatasetIds } })
+      ).toArray();
 
-      const datasetUnhappyPathTests = await this.datasetUnhappyPathTestCollection.find({
-        testingDatasetId: { $in: assignedDatasetIds },
-        deletedAt: null,
-        tenantId: checkpoint.tenantId,
-      }).toArray();
+      const datasetUnhappyPathTests = await this.datasetUnhappyPathTestCollection.find(
+        this.buildDatasetUnhappyPathTestFilter(checkpoint.tenantId, { testingDatasetId: { $in: assignedDatasetIds } })
+      ).toArray();
 
       // Generate structured test cases using AI
       const generatedInputs = await this.aiTestsetGenerationAgent.generateTypedOrderInputs({
@@ -387,15 +419,13 @@ export class TestingDatasetService {
       });
 
       // Remove existing tests for this checkpoint before saving new ones
-      await this.checkpointHappyPathTestCollection.deleteMany({
-        checkpointId: checkpoint._id,
-        tenantId: checkpoint.tenantId,
-      });
+      await this.checkpointHappyPathTestCollection.deleteMany(
+        this.buildCheckpointHappyPathTestFilter(checkpoint.tenantId, { checkpointId: checkpoint._id })
+      );
 
-      await this.checkpointUnhappyPathTestCollection.deleteMany({
-        checkpointId: checkpoint._id,
-        tenantId: checkpoint.tenantId,
-      });
+      await this.checkpointUnhappyPathTestCollection.deleteMany(
+        this.buildCheckpointUnhappyPathTestFilter(checkpoint.tenantId, { checkpointId: checkpoint._id })
+      );
 
       if (generatedInputs.happyPathTestRuns && generatedInputs.happyPathTestRuns.length > 0) {
         const happyPathInserts = generatedInputs.happyPathTestRuns.map(test => ({
@@ -433,17 +463,13 @@ export class TestingDatasetService {
       }
 
       // Get test runs from separate collections
-      const happyPathTestRuns = await this.checkpointHappyPathTestCollection.find({
-        checkpointId: checkpoint._id!,
-        tenantId: checkpoint.tenantId,
-        deletedAt: null
-      }).toArray();
+      const happyPathTestRuns = await this.checkpointHappyPathTestCollection.find(
+        this.buildCheckpointHappyPathTestFilter(checkpoint.tenantId, { checkpointId: checkpoint._id })
+      ).toArray();
 
-      const unhappyPathTestRuns = await this.checkpointUnhappyPathTestCollection.find({
-        checkpointId: checkpoint._id!,
-        tenantId: checkpoint.tenantId,
-        deletedAt: null
-      }).toArray();
+      const unhappyPathTestRuns = await this.checkpointUnhappyPathTestCollection.find(
+        this.buildCheckpointUnhappyPathTestFilter(checkpoint.tenantId, { checkpointId: checkpoint._id })
+      ).toArray();
 
       // Check if checkpoint has testsets
       if (happyPathTestRuns.length === 0 && unhappyPathTestRuns.length === 0) {
@@ -458,15 +484,13 @@ export class TestingDatasetService {
       const unhappyPathTestIds = unhappyPathTestRuns.map(test => test.datasetTestId);
 
       // Fetch expected data in bulk
-      const happyPathTestData = await this.datasetHappyPathTestCollection.find({
-        _id: { $in: happyPathTestIds },
-        deletedAt: null
-      }).toArray();
+      const happyPathTestData = await this.datasetHappyPathTestCollection.find(
+        this.buildDatasetHappyPathTestFilter(undefined, { _id: { $in: happyPathTestIds } })
+      ).toArray();
 
-      const unhappyPathTestData = await this.datasetUnhappyPathTestCollection.find({
-        _id: { $in: unhappyPathTestIds },
-        deletedAt: null
-      }).toArray();
+      const unhappyPathTestData = await this.datasetUnhappyPathTestCollection.find(
+        this.buildDatasetUnhappyPathTestFilter(undefined, { _id: { $in: unhappyPathTestIds } })
+      ).toArray();
 
       // Create lookup maps for quick access
       const happyPathDataMap = new Map(happyPathTestData.map(test => [test._id!.toString(), test]));
@@ -518,24 +542,20 @@ export class TestingDatasetService {
     }
   }
 
-  async assignTestingDataset(agentId: string, datasetId: string, tenantId: string): Promise<void> {
+  async assignTestingDataset(agentId: string, datasetId: string, tenantId: string | undefined): Promise<void> {
     await this.testingDatasetAssignmentCollection.insertOne({
       pricingAgentId: new ObjectId(agentId),
       testingDatasetId: new ObjectId(datasetId),
-      tenantId: tenantId || '',
+      tenantId: tenantId,
       assignedAt: new Date(),
     });
   }
 
   async findTestingDatasetAssignments(agentId: string, datasetId: string, tenantId?: string): Promise<TestingDatasetAssignment[]> {
-    const filter: any = {
+    const filter = this.buildTestingDatasetAssignmentFilter(tenantId, {
       pricingAgentId: new ObjectId(agentId),
       testingDatasetId: new ObjectId(datasetId),
-    };
-
-    if (tenantId) {
-      filter.tenantId = tenantId;
-    }
+    });
 
     return this.testingDatasetAssignmentCollection.find(filter).toArray();
   }
@@ -545,24 +565,19 @@ export class TestingDatasetService {
 
     try {
       // Get test runs from separate collections
-      const happyPathTestRuns = await this.checkpointHappyPathTestCollection.find({
-        checkpointId: checkpoint._id!,
-        tenantId: checkpoint.tenantId,
-        deletedAt: null
-      }).toArray();
+      const happyPathTestRuns = await this.checkpointHappyPathTestCollection.find(
+        this.buildCheckpointHappyPathTestFilter(checkpoint.tenantId, { checkpointId: checkpoint._id })
+      ).toArray();
 
-      const unhappyPathTestRuns = await this.checkpointUnhappyPathTestCollection.find({
-        checkpointId: checkpoint._id!,
-        tenantId: checkpoint.tenantId,
-        deletedAt: null
-      }).toArray();
+      const unhappyPathTestRuns = await this.checkpointUnhappyPathTestCollection.find(
+        this.buildCheckpointUnhappyPathTestFilter(checkpoint.tenantId, { checkpointId: checkpoint._id })
+      ).toArray();
 
       // Check if checkpoint has testsets
       if (happyPathTestRuns.length === 0 && unhappyPathTestRuns.length === 0) {
         this.logger.log(`No testsets found for checkpoint: ${checkpoint._id}`);
         return {
           checkpointId: checkpoint._id!,
-          tenantId: checkpoint.tenantId,
           happyPathTests: [],
           unhappyPathTests: []
         };
@@ -600,7 +615,6 @@ export class TestingDatasetService {
             checkpointId: test.checkpointId,
             datasetId: test.datasetId,
             datasetTestId: test.datasetTestId,
-            tenantId: test.tenantId,
             createdAt: test.createdAt,
             functionInputParams: test.functionInputParams,
             testRunResult: test.testRunResult,
@@ -618,7 +632,6 @@ export class TestingDatasetService {
             checkpointId: test.checkpointId,
             datasetId: test.datasetId,
             datasetTestId: test.datasetTestId,
-            tenantId: test.tenantId,
             createdAt: test.createdAt,
             functionInputParams: test.functionInputParams,
             testRunResult: test.testRunResult,
@@ -629,7 +642,6 @@ export class TestingDatasetService {
 
       const result: CheckpointTestsetDto = {
         checkpointId: checkpoint._id!,
-        tenantId: checkpoint.tenantId,
         happyPathTests: happyPathTestsWithData,
         unhappyPathTests: unhappyPathTestsWithData
       };
