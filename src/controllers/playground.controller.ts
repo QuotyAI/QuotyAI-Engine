@@ -8,6 +8,7 @@ import { AiDemoConversationAgentService } from '../ai-agents/ai-demo-conversatio
 import { DynamicRunnerService } from '../services/dynamic-runner.service';
 import { PlaygroundExecutionRequestDto, PlaygroundExecutionResponseDto, DemoConversationResponseDto } from '../dtos/playground-execution.dto';
 import { AuthGuard } from '../auth/auth.guard';
+import { LLMService } from 'src/ai-agents/llm.service';
 
 @ApiTags('playground')
 @Controller('playground')
@@ -21,6 +22,7 @@ export class PlaygroundController {
     private readonly aiPlaygroundMessageAgent: AiPlaygroundMessageAgentService,
     private readonly aiDemoConversationAgent: AiDemoConversationAgentService,
     private readonly dynamicRunnerService: DynamicRunnerService,
+    private readonly llmService: LLMService,
   ) {
     this.logger.log('PlaygroundController initialized');
   }
@@ -81,11 +83,13 @@ export class PlaygroundController {
         role: msg.role
       }));
 
+      const llmConfig = await this.llmService.getTenantLLMConfig(tenantId);
+
       const conversionResult = await this.aiOrderConversionAgent.convertOrder({
         conversationHistory: conversationHistory,
         newUserMessage: body.input,
         schema: checkpoint.functionSchema
-      });
+      }, llmConfig);
 
       // Step 2: Execute the pricing function (without testing)
       const functionResult = await this.dynamicRunnerService.executePricingFunction(
@@ -106,7 +110,7 @@ export class PlaygroundController {
         conversation: conversation,
         functionResult: functionResult,
         pricingAgentContext: pricingAgentContext
-      });
+      }, llmConfig);
 
       return {
         structuredOrder: conversionResult.structuredOrderInput,
@@ -173,12 +177,14 @@ export class PlaygroundController {
         .filter(msg => msg)
         .join('\n');
 
+      const llmConfig = await this.llmService.getTenantLLMConfig(tenantId);
+
       // Generate demo conversation
       const demoResult = await this.aiDemoConversationAgent.generateDemoConversation({
         pricingAgentContext: pricingAgentContext,
         functionSchema: checkpoint.functionSchema,
         functionCode: checkpoint.functionCode
-      });
+      }, llmConfig);
 
       return {
         conversationHistory: demoResult.conversationHistory,

@@ -1,36 +1,57 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { SystemMessage, HumanMessage } from '@langchain/core/messages';
-import { LLMService, LLMServiceConfig } from './llm.service';
+import { initChatModel } from 'langchain/chat_models/universal';
+import { LangchainInitModelConfig } from './llm.service';
 
 export interface FunctionGenerationRequest {
   pricingDescription: string;
   schema: string;
+  feedback?: string;
+  currentFunction?: string;
 }
 
 export interface GeneratedFunction {
   code: string;
 }
 
+/**
+ * AI-powered service for generating TypeScript pricing calculation functions
+ * from natural language descriptions and schema definitions.
+ *
+ * This service uses large language models to create deterministic pricing functions
+ * that implement complex business rules, validation logic, and calculation backtraces.
+ * The generated functions include comprehensive error handling, input validation,
+ * and detailed audit trails for pricing decisions.
+ *
+ * Key features:
+ * - Generates complete TypeScript functions with proper type annotations
+ * - Implements business rule validation and error handling
+ * - Creates detailed pricing calculation backtraces for audit trails
+ * - Supports feedback-based regeneration for iterative improvement
+ * - Uses constants for all fixed pricing values
+ */
 @Injectable()
 export class AiFormulaGenerationAgentService {
   private readonly logger = new Logger(AiFormulaGenerationAgentService.name);
 
-  constructor(private readonly llmService: LLMService) {
+  constructor() {
     this.logger.log('AiFormulaGenerationAgentService initialized');
   }
 
-  async generatePricingFunction(request: FunctionGenerationRequest, llmConfig?: LLMServiceConfig): Promise<GeneratedFunction> {
+  async generatePricingFunction(request: FunctionGenerationRequest, llmConfig: LangchainInitModelConfig): Promise<GeneratedFunction> {
     this.logger.log(`Generating pricing function`);
 
     try {
       // Generate the prompt using the embedded template
-      const prompt = this.generatePrompt(request.pricingDescription, request.schema);
+      const prompt = this.generatePrompt(request);
 
       this.logger.debug(`Prompt generated: system prompt ${prompt.systemPrompt.length} characters, user message ${prompt.userMessage.length} characters`);
 
-      // Get the LLM instance
-      const llm = await this.llmService.getLLM(llmConfig);
+      // Create LLM instance directly using initChatModel
+      const llm = await initChatModel(llmConfig.model, {
+      ...llmConfig.additionalConfig,
+      });
 
       // Generate the TypeScript function
       const result = await llm.invoke([
@@ -50,7 +71,7 @@ export class AiFormulaGenerationAgentService {
     }
   }
 
-  private generatePrompt(pricingDescription: string, schema: string): { systemPrompt: string; userMessage: string } {
+  private generatePrompt(request: FunctionGenerationRequest): { systemPrompt: string; userMessage: string } {
     const systemPrompt = `<role>You are an expert TypeScript developer specializing in pricing calculation functions.
 Your task is to generate clean, efficient, and deterministic TypeScript functions from natural language pricing descriptions.</role>
 
@@ -88,14 +109,13 @@ Your task is to generate clean, efficient, and deterministic TypeScript function
   }
 
   export enum QuoteErrorCode {
-    NOT_ENOUGH_DATA_TO_QUOTE = 'NOT_ENOUGH_DATA_TO_QUOTE',
-    INCORRECT_ORDER_PARAMETER_VALUE = 'INCORRECT_ORDER_PARAMETER_VALUE',
-    QUOTATION_RULE_VIOLATION = 'QUOTATION_RULE_VIOLATION'
+    INCORRECT_INPUT_VALUE = 'INCORRECT_INPUT_VALUE',      // Invalid input data: missing required fields, incorrect data types, out-of-range values, unknown service options, or input that doesn't match the expected schema
+    QUOTATION_RULE_VIOLATION = 'QUOTATION_RULE_VIOLATION' // Business rule violation: minimum requirements not met, forbidden service combinations, insufficient commitments, or other constraints preventing valid quotation
   }
   </return-schema-object>
 
   <example>
-  Input: "General cleaning 3hrs = $100 per visit, General cleaning 4hrs = $120 per visit, General cleaning 3hrs weekly = $80 per visit, min 10 visits commitment. Deep cleaning 80-100sqm = $100, Deep cleaning > 100sqm = $1.5 per sqm, Add-ons for deep cleaning only: Curtains cleaning $20, L-Sofa cleaning $25, Upholstery 2 seats sofa $40, 3 seats sofa $50, General cleaning + Upholstery = allowed, Deep cleaning + Upholstery = not allowed, Min order $200 before taxes and processing fee, if total order < $500 tax 1.5%, if total order >= $500 tax 1.2%, processing fee is $7.5 for any service except Upholstery only, if a combination Any other service + Upholstery, then processing fee."
+  Input: "General cleaning 3hrs = $100 per visit, General clfeaning 4hrs = $120 per visit, General cleaning 3hrs weekly = $80 per visit, min 10 visits commitment. Deep cleaning 80-100sqm = $100, Deep cleaning > 100sqm = $1.5 per sqm, Add-ons for deep cleaning only: Curtains cleaning $20, L-Sofa cleaning $25, Upholstery 2 seats sofa $40, 3 seats sofa $50, General cleaning + Upholstery = allowed, Deep cleaning + Upholstery = not allowed, Min order $200 before taxes and processing fee, if total order < $500 tax 1.5%, if total order >= $500 tax 1.2%, processing fee is $7.5 for any service except Upholstery only, if a combination Any other service + Upholstery, then processing fee."
 
   Output:
   function quoteOrder(order: OrderInput): QuoteResult {
@@ -175,7 +195,7 @@ Your task is to generate clean, efficient, and deterministic TypeScript function
               pricingCalculationBacktrace.subTasks[1].subTasks[pricingCalculationBacktrace.subTasks[1].subTasks.length - 1].subTasks.push({ operation: '3h_weekly_calc', description: 'General cleaning 3h weekly: ' + GENERAL_CLEANING_3H_WEEKLY + ' * ' + generalCleaning.numberOfVisits + ' = ' + (GENERAL_CLEANING_3H_WEEKLY * generalCleaning.numberOfVisits), subTasks: [] });
               break;
             default:
-              errors.push({ code: 'INCORRECT_ORDER_PARAMETER_VALUE', message: 'Unknown general cleaning option: ' + generalCleaning.option });
+              errors.push({ code: 'INCORRECT_INPUT_VALUE', message: 'Unknown general cleaning option: ' + generalCleaning.option });
           }
           break;
 
@@ -200,7 +220,7 @@ Your task is to generate clean, efficient, and deterministic TypeScript function
                 pricingCalculationBacktrace.subTasks[1].subTasks[pricingCalculationBacktrace.subTasks[1].subTasks.length - 1].subTasks.push({ operation: 'addon_l_sofa', description: 'L-Sofa addon: ' + L_SOFA_ADDON, subTasks: [] });
                 break;
               default:
-                errors.push({ code: 'INCORRECT_ORDER_PARAMETER_VALUE', message: 'Unknown deep cleaning addon: ' + addon });
+                errors.push({ code: 'INCORRECT_INPUT_VALUE', message: 'Unknown deep cleaning addon: ' + addon });
             }
           }
           break;
@@ -217,12 +237,12 @@ Your task is to generate clean, efficient, and deterministic TypeScript function
               pricingCalculationBacktrace.subTasks[1].subTasks[pricingCalculationBacktrace.subTasks[1].subTasks.length - 1].subTasks.push({ operation: 'upholstery_3_seats', description: 'Upholstery 3 seats: ' + UPHOLSTERY_3_SEATS + ' * ' + upholstery.quantity + ' = ' + (UPHOLSTERY_3_SEATS * upholstery.quantity), subTasks: [] });
               break;
             default:
-              errors.push({ code: 'INCORRECT_ORDER_PARAMETER_VALUE', message: 'Unknown upholstery item: ' + upholstery.item });
+              errors.push({ code: 'INCORRECT_INPUT_VALUE', message: 'Unknown upholstery item: ' + upholstery.item });
           }
           break;
 
         default:
-          errors.push({ code: 'INCORRECT_ORDER_PARAMETER_VALUE', message: 'Unknown service type: ' + service.type });
+          errors.push({ code: 'INCORRECT_INPUT_VALUE', message: 'Unknown service type: ' + service.type });
       }
     }
 
@@ -301,10 +321,18 @@ Your task is to generate clean, efficient, and deterministic TypeScript function
   Do not return OrderInput or QuoteResult definitions.
   </output-format>`;
 
-    const userMessage = `<order-schema>${schema}</order-schema>
+    const userMessage = `<order-schema>${request.schema}</order-schema>
 
-  <pricing-rules-in-natural-language>${pricingDescription}</pricing-rules-in-natural-language>
-  
+  <pricing-rules-in-natural-language>${request.pricingDescription}</pricing-rules-in-natural-language>
+
+  ${request.currentFunction ? `<current-function>
+  ${request.currentFunction}
+  </current-function>` : ''}
+
+  ${request.feedback ? `<user-feedback>
+  ${request.feedback}
+  </user-feedback>` : ''}
+
   Start next message with the function definition:
   function quoteOrder(order: OrderInput): QuoteResult {`;
 

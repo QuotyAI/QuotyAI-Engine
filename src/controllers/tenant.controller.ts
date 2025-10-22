@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Req, HttpException, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { TenantService } from '../services/tenant.service';
 import { AuthGuard } from '../auth/auth.guard';
@@ -10,6 +10,10 @@ import { SuccessResponseDto } from '../dtos/success-response.dto';
 import { TenantDto } from '../dtos/tenant.dto';
 import { UserDto } from '../dtos/user.dto';
 import { UserTenantDto } from '../dtos/user-tenant.dto';
+import { LLMConfigurationDto } from '../dtos/llm-configuration.dto';
+import { UpdateTenantBasicInfoDto } from '../dtos/update-tenant-basic-info.dto';
+import { UpdateTenantBuilderLlmConfigDto } from '../dtos/update-tenant-builder-llm-config.dto';
+import { UpdateTenantChatbotLlmConfigDto } from '../dtos/update-tenant-chatbot-llm-config.dto';
 import type { AuthenticatedRequest } from '../auth/auth.guard';
 
 @ApiTags('User Tenants')
@@ -44,8 +48,42 @@ export class TenantController {
     return this.tenantService.getTenantById(tenantId);
   }
 
+  // Specific update endpoints
+  @Put('tenants/:id/basic-info')
+  @ApiOperation({ summary: 'Update tenant basic information (name and description)' })
+  @ApiResponse({ status: 200, description: 'Tenant basic info updated successfully', type: TenantDto })
+  async updateTenantBasicInfo(
+    @Param('id') tenantId: string,
+    @Body() body: UpdateTenantBasicInfoDto
+  ): Promise<TenantDto | null> {
+    return this.tenantService.updateTenantBasicInfo(tenantId, body);
+  }
+
+
+
+  @Put('tenants/:id/builder-llm-config')
+  @ApiOperation({ summary: 'Update tenant builder LLM configuration' })
+  @ApiResponse({ status: 200, description: 'Builder LLM configuration updated successfully', type: TenantDto })
+  async updateTenantBuilderLlmConfig(
+    @Param('id') tenantId: string,
+    @Body() body: UpdateTenantBuilderLlmConfigDto
+  ): Promise<TenantDto | null> {
+    return this.tenantService.updateTenantBuilderLlmConfig(tenantId, body.builderLlmConfiguration);
+  }
+
+  @Put('tenants/:id/chatbot-llm-config')
+  @ApiOperation({ summary: 'Update tenant chatbot LLM configuration' })
+  @ApiResponse({ status: 200, description: 'Chatbot LLM configuration updated successfully', type: TenantDto })
+  async updateTenantChatbotLlmConfig(
+    @Param('id') tenantId: string,
+    @Body() body: UpdateTenantChatbotLlmConfigDto
+  ): Promise<TenantDto | null> {
+    return this.tenantService.updateTenantChatbotLlmConfig(tenantId, body.chatbotLlmConfiguration);
+  }
+
+  // Keep the general update endpoint for backward compatibility
   @Put('tenants/:id')
-  @ApiOperation({ summary: 'Update tenant' })
+  @ApiOperation({ summary: 'Update tenant (deprecated - use specific endpoints)' })
   @ApiResponse({ status: 200, description: 'Tenant updated successfully', type: TenantDto })
   async updateUserTenant(
     @Param('id') tenantId: string,
@@ -71,6 +109,8 @@ export class TenantController {
     @Req() request: AuthenticatedRequest,
     @Body() body: AssignUserToTenantDto
   ): Promise<UserTenantDto> {
+    if (!request.user?.id)
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     const firebaseId = request.user.id;
     const user = await this.tenantService.getUserByFirebaseId(firebaseId);
     if (!user) {
@@ -86,6 +126,8 @@ export class TenantController {
     @Param('tenantId') tenantId: string,
     @Req() request: AuthenticatedRequest
   ): Promise<SuccessResponseDto> {
+    if (!request.user?.id)
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     const firebaseId = request.user.id;
     const user = await this.tenantService.getUserByFirebaseId(firebaseId);
     if (!user) {
@@ -106,6 +148,8 @@ export class TenantController {
   @ApiOperation({ summary: 'Get all tenants for the authenticated user' })
   @ApiResponse({ status: 200, description: 'List of tenants for the authenticated user', type: [TenantDto] })
   async getUserTenants(@Req() request: AuthenticatedRequest): Promise<TenantDto[]> {
+    if (!request.user?.id)
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     const firebaseId = request.user.id;
     const user = await this.tenantService.getUserByFirebaseId(firebaseId);
     if (!user) {
@@ -118,6 +162,8 @@ export class TenantController {
   @ApiOperation({ summary: 'Update selected tenant for authenticated user' })
   @ApiResponse({ status: 200, description: 'Selected tenant updated successfully', type: UserDto })
   async updateSelectedTenant(@Req() request: AuthenticatedRequest, @Body() body: UpdateSelectedTenantDto): Promise<UserDto | null> {
+    if (!request.user?.id)
+          throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     const firebaseId = request.user.id;
     return this.tenantService.updateUserSelectedTenant(firebaseId, body.tenantId);
   }

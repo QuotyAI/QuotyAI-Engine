@@ -1,9 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { HumanMessage } from '@langchain/core/messages';
+import { initChatModel } from 'langchain/chat_models/universal';
 import { HappyPathTestData } from 'src/models/mongodb.model';
 import { z } from 'zod';
-import { LLMService, LLMServiceConfig } from './llm.service';
+import { LangchainInitModelConfig } from './llm.service';
 
 const HappyPathTestDataSchema = z.object({
   tests: z.array(z.object({
@@ -17,11 +18,11 @@ const HappyPathTestDataSchema = z.object({
 export class AiHappyPathDatasetGenerationAgentService {
   private readonly logger = new Logger(AiHappyPathDatasetGenerationAgentService.name);
 
-  constructor(private readonly llmService: LLMService) {
+  constructor() {
     this.logger.log('AiHappyPathDatasetGenerationAgentService initialized');
   }
 
-  async generateHappyPathScenarios(pricingInNaturalLanguage: string, inputOrderSchema: string, formulaFunctionCode: string, llmConfig?: LLMServiceConfig): Promise<HappyPathTestData[]> {
+  async generateHappyPathScenarios(pricingInNaturalLanguage: string, inputOrderSchema: string, formulaFunctionCode: string, llmConfig: LangchainInitModelConfig): Promise<HappyPathTestData[]> {
     this.logger.log(`Generating test scenarios for pricing function`);
 
     try {
@@ -30,8 +31,10 @@ export class AiHappyPathDatasetGenerationAgentService {
 
       this.logger.debug(`Prompt generated: ${prompt.length} characters`);
 
-      // Get the LLM instance
-      const llm = await this.llmService.getLLM(llmConfig);
+      // Create LLM instance directly using initChatModel
+      const llm = await initChatModel(llmConfig.model, {
+        ...llmConfig.additionalConfig,
+      });
 
       // Generate the test scenarios as JSON
       const result = await llm.withStructuredOutput(HappyPathTestDataSchema, { method: 'functionCalling' }).invoke([new HumanMessage(prompt)]);

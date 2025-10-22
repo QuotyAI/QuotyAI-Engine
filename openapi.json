@@ -88,12 +88,12 @@
         ]
       }
     },
-    "/pricing-agents/{id}": {
+    "/pricing-agents/{agentId}": {
       "get": {
         "operationId": "PricingAgentsController_getPricingAgent",
         "parameters": [
           {
-            "name": "id",
+            "name": "agentId",
             "required": true,
             "in": "path",
             "description": "Pricing agent ID",
@@ -141,7 +141,7 @@
         "operationId": "PricingAgentsController_updatePricingAgent",
         "parameters": [
           {
-            "name": "id",
+            "name": "agentId",
             "required": true,
             "in": "path",
             "description": "Pricing agent ID",
@@ -189,7 +189,7 @@
         "operationId": "PricingAgentsController_deletePricingAgent",
         "parameters": [
           {
-            "name": "id",
+            "name": "agentId",
             "required": true,
             "in": "path",
             "description": "Pricing agent ID",
@@ -234,6 +234,76 @@
           }
         },
         "summary": "Delete a pricing agent",
+        "tags": [
+          "pricing-agents"
+        ]
+      }
+    },
+    "/pricing-agents/{agentId}/deployed": {
+      "post": {
+        "operationId": "PricingAgentsController_setPricingAgentDeployment",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Tenant-ID",
+            "required": false,
+            "in": "header",
+            "description": "Tenant ID (required in multi-tenant mode)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetDeploymentStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pricing agent deployment status set successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingAgent"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingAgent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - tenantId required in multi-tenant mode or invalid parameters"
+          },
+          "404": {
+            "description": "Pricing agent not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Set the deployment status of a pricing agent",
         "tags": [
           "pricing-agents"
         ]
@@ -383,72 +453,6 @@
         ]
       }
     },
-    "/pricing-agents/{agentId}/build": {
-      "post": {
-        "operationId": "PricingAgentsController_buildAgent",
-        "parameters": [
-          {
-            "name": "agentId",
-            "required": true,
-            "in": "path",
-            "description": "Pricing agent ID",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "X-Tenant-ID",
-            "required": false,
-            "in": "header",
-            "description": "Tenant ID",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "checkpointId",
-            "required": false,
-            "in": "query",
-            "description": "Checkpoint ID (optional, uses latest if not provided)",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Agent built successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PricingAgentCheckpoint"
-                }
-              }
-            }
-          },
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PricingAgentCheckpoint"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Pricing agent or checkpoint not found"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "summary": "Build a complete pricing agent with schema and formula",
-        "tags": [
-          "pricing-agents"
-        ]
-      }
-    },
     "/pricing-agents/{agentId}/build/schema": {
       "post": {
         "operationId": "PricingAgentsController_buildSchema",
@@ -481,24 +485,36 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildSchemaDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Schema built successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "functionSchema": {
-                      "type": "string"
-                    }
-                  }
+                  "$ref": "#/components/schemas/PricingAgentCheckpoint"
                 }
               }
             }
           },
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingAgentCheckpoint"
+                }
+              }
+            }
           },
           "404": {
             "description": "Pricing agent or checkpoint not found"
@@ -545,6 +561,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildFormulaDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Formula built successfully",
@@ -694,7 +720,7 @@
         ]
       }
     },
-    "/pricing-agents/{agentId}/checkpoints/{checkpointId}/datasets/{datasetId}": {
+    "/pricing-agents/{agentId}/datasets/{datasetId}": {
       "post": {
         "operationId": "PricingAgentsController_assignTestingDataset",
         "parameters": [
@@ -761,9 +787,68 @@
         "tags": [
           "pricing-agents"
         ]
+      },
+      "delete": {
+        "operationId": "PricingAgentsController_unassignTestingDataset",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "datasetId",
+            "required": true,
+            "in": "path",
+            "description": "Testing dataset ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Tenant-ID",
+            "required": false,
+            "in": "header",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Testing dataset unassigned successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "unassigned": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent or dataset assignment not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Unassign a testing dataset from a pricing agent checkpoint",
+        "tags": [
+          "pricing-agents"
+        ]
       }
     },
-    "/pricing-agents/pricing-agents/{agentId}/build/dataset": {
+    "/pricing-agents/{agentId}/datasets/build": {
       "post": {
         "operationId": "PricingAgentsController_aiGenerateDataset",
         "parameters": [
@@ -971,6 +1056,373 @@
         "summary": "Generate a demo conversation for the pricing agent",
         "tags": [
           "playground"
+        ]
+      }
+    },
+    "/integrations/pricing-agents/{agentId}/calculate": {
+      "post": {
+        "operationId": "IntegrationsController_calculatePrice",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "API token (Bearer token)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Price calculated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteResultDTO"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteResultDTO"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid parameters or agent not deployed"
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Calculate price using agent schema parameters",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/integrations/pricing-agents/{agentId}/chat": {
+      "post": {
+        "operationId": "IntegrationsController_processConversation",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "API token (Bearer token)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaygroundExecutionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conversation processed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaygroundExecutionResponseDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaygroundExecutionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid input or agent not deployed"
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Process human language conversation for pricing calculation",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api-keys": {
+      "post": {
+        "operationId": "ApiKeysController_createApiKey",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "required": false,
+            "in": "header",
+            "description": "Tenant ID (required in multi-tenant mode)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApiKeyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "API key created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateApiKeyResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required parameters"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Create a new API key",
+        "tags": [
+          "api-keys"
+        ]
+      },
+      "get": {
+        "operationId": "ApiKeysController_getApiKeys",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "required": false,
+            "in": "header",
+            "description": "Tenant ID (required in multi-tenant mode)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API keys retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApiKey"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - tenantId required in multi-tenant mode"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Get all API keys for a tenant",
+        "tags": [
+          "api-keys"
+        ]
+      }
+    },
+    "/api-keys/{id}": {
+      "get": {
+        "operationId": "ApiKeysController_getApiKey",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "API key ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Tenant-ID",
+            "required": false,
+            "in": "header",
+            "description": "Tenant ID (required in multi-tenant mode)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API key retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKey"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API key not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Get a specific API key by ID",
+        "tags": [
+          "api-keys"
+        ]
+      },
+      "put": {
+        "operationId": "ApiKeysController_updateApiKey",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "API key ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Tenant-ID",
+            "required": false,
+            "in": "header",
+            "description": "Tenant ID (required in multi-tenant mode)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateApiKeyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "API key updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKey"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API key not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Update an API key",
+        "tags": [
+          "api-keys"
+        ]
+      },
+      "delete": {
+        "operationId": "ApiKeysController_deleteApiKey",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "API key ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Tenant-ID",
+            "required": false,
+            "in": "header",
+            "description": "Tenant ID (required in multi-tenant mode)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API key deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API key not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Delete an API key",
+        "tags": [
+          "api-keys"
         ]
       }
     },
@@ -1409,7 +1861,7 @@
         ]
       }
     },
-    "/testsets/pricing-agents/{agentId}/test": {
+    "/testsets/{agentId}/{checkpointId}/runner": {
       "post": {
         "operationId": "TestsetsController_runCheckpointTestset",
         "parameters": [
@@ -1487,7 +1939,17 @@
     "/extraction/extract": {
       "post": {
         "operationId": "ExtractionController_extractPricingTable",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "required": false,
+            "in": "header",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1654,7 +2116,7 @@
             }
           }
         },
-        "summary": "Update tenant",
+        "summary": "Update tenant (deprecated - use specific endpoints)",
         "tags": [
           "User Tenants"
         ]
@@ -1684,6 +2146,129 @@
           }
         },
         "summary": "Delete tenant (soft delete)",
+        "tags": [
+          "User Tenants"
+        ]
+      }
+    },
+    "/user-tenants/tenants/{id}/basic-info": {
+      "put": {
+        "operationId": "TenantController_updateTenantBasicInfo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantBasicInfoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tenant basic info updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update tenant basic information (name and description)",
+        "tags": [
+          "User Tenants"
+        ]
+      }
+    },
+    "/user-tenants/tenants/{id}/builder-llm-config": {
+      "put": {
+        "operationId": "TenantController_updateTenantBuilderLlmConfig",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantBuilderLlmConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Builder LLM configuration updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update tenant builder LLM configuration",
+        "tags": [
+          "User Tenants"
+        ]
+      }
+    },
+    "/user-tenants/tenants/{id}/chatbot-llm-config": {
+      "put": {
+        "operationId": "TenantController_updateTenantChatbotLlmConfig",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantChatbotLlmConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chatbot LLM configuration updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update tenant chatbot LLM configuration",
         "tags": [
           "User Tenants"
         ]
@@ -2150,9 +2735,6 @@
           "tenantId": {
             "type": "string"
           },
-          "version": {
-            "type": "number"
-          },
           "humanInputMessages": {
             "type": "array",
             "items": {
@@ -2183,7 +2765,6 @@
         },
         "required": [
           "pricingAgentId",
-          "version",
           "humanInputMessages",
           "createdAt",
           "checkpointTrigger"
@@ -2218,11 +2799,15 @@
             "format": "date-time",
             "type": "string",
             "nullable": true
+          },
+          "isDeployed": {
+            "type": "boolean"
           }
         },
         "required": [
           "name",
-          "createdAt"
+          "createdAt",
+          "isDeployed"
         ]
       },
       "PricingAgent": {
@@ -2246,11 +2831,26 @@
             "format": "date-time",
             "type": "string",
             "nullable": true
+          },
+          "isDeployed": {
+            "type": "boolean"
           }
         },
         "required": [
           "name",
-          "createdAt"
+          "createdAt",
+          "isDeployed"
+        ]
+      },
+      "SetDeploymentStatusDto": {
+        "type": "object",
+        "properties": {
+          "isDeployed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "isDeployed"
         ]
       },
       "AddHumanInputMessageDto": {
@@ -2271,6 +2871,22 @@
                 "NEW_PROMOTION"
               ]
             }
+          }
+        }
+      },
+      "BuildSchemaDto": {
+        "type": "object",
+        "properties": {
+          "feedback": {
+            "type": "string"
+          }
+        }
+      },
+      "BuildFormulaDto": {
+        "type": "object",
+        "properties": {
+          "feedback": {
+            "type": "string"
           }
         }
       },
@@ -2353,8 +2969,7 @@
           "expectedErrorType": {
             "type": "string",
             "enum": [
-              "NOT_ENOUGH_DATA_TO_QUOTE",
-              "INCORRECT_ORDER_PARAMETER_VALUE",
+              "INCORRECT_INPUT_VALUE",
               "QUOTATION_RULE_VIOLATION"
             ]
           },
@@ -2566,6 +3181,96 @@
         "required": [
           "nextUserMessage"
         ]
+      },
+      "CreateApiKeyDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "ApiKey": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "name",
+          "key",
+          "tenantId",
+          "isActive",
+          "createdAt"
+        ]
+      },
+      "CreateApiKeyResponseDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "apiKey": {
+            "$ref": "#/components/schemas/ApiKey"
+          }
+        },
+        "required": [
+          "key",
+          "apiKey"
+        ]
+      },
+      "UpdateApiKeyDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        }
       },
       "TestingDataset": {
         "type": "object",
@@ -2807,6 +3512,122 @@
           "name"
         ]
       },
+      "SubscriptionPlan": {
+        "type": "string",
+        "enum": [
+          "free",
+          "starter",
+          "professional",
+          "enterprise"
+        ]
+      },
+      "SubscriptionStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "inactive",
+          "cancelled",
+          "expired",
+          "trial"
+        ]
+      },
+      "BillingCycle": {
+        "type": "string",
+        "enum": [
+          "monthly",
+          "yearly"
+        ]
+      },
+      "Subscription": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SubscriptionPlan"
+              }
+            ]
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SubscriptionStatus"
+              }
+            ]
+          },
+          "startDate": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "endDate": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "billingCycle": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BillingCycle"
+              }
+            ]
+          },
+          "maxUsers": {
+            "type": "number"
+          },
+          "maxApiKeys": {
+            "type": "number"
+          },
+          "featuresEnabled": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "plan",
+          "status",
+          "startDate",
+          "billingCycle"
+        ]
+      },
+      "LLMProvider": {
+        "type": "string",
+        "enum": [
+          "openai",
+          "anthropic",
+          "google-genai",
+          "azure_openai"
+        ]
+      },
+      "LLMConfigurationResponseDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LLMProvider"
+              }
+            ]
+          },
+          "model": {
+            "type": "string"
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "additionalConfig": {
+            "type": "object"
+          },
+          "useByok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "provider",
+          "model",
+          "useByok"
+        ]
+      },
       "TenantDto": {
         "type": "object",
         "properties": {
@@ -2823,6 +3644,15 @@
           "isActive": {
             "type": "boolean",
             "default": true
+          },
+          "subscription": {
+            "$ref": "#/components/schemas/Subscription"
+          },
+          "builderLlmConfiguration": {
+            "$ref": "#/components/schemas/LLMConfigurationResponseDto"
+          },
+          "chatbotLlmConfiguration": {
+            "$ref": "#/components/schemas/LLMConfigurationResponseDto"
           },
           "createdAt": {
             "format": "date-time",
@@ -2844,6 +3674,21 @@
           "createdAt"
         ]
       },
+      "UpdateTenantBasicInfoDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the tenant",
+            "example": "My Tenant"
+          },
+          "description": {
+            "type": "string",
+            "description": "The description of the tenant",
+            "example": "A description of my tenant"
+          }
+        }
+      },
       "LLMConfigurationDto": {
         "type": "object",
         "properties": {
@@ -2852,8 +3697,8 @@
             "enum": [
               "openai",
               "anthropic",
-              "google",
-              "azure-openai"
+              "google-genai",
+              "azure_openai"
             ]
           },
           "model": {
@@ -2879,6 +3724,38 @@
           "useByok"
         ]
       },
+      "UpdateTenantBuilderLlmConfigDto": {
+        "type": "object",
+        "properties": {
+          "builderLlmConfiguration": {
+            "description": "The builder LLM configuration for the tenant",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LLMConfigurationDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "builderLlmConfiguration"
+        ]
+      },
+      "UpdateTenantChatbotLlmConfigDto": {
+        "type": "object",
+        "properties": {
+          "chatbotLlmConfiguration": {
+            "description": "The chatbot LLM configuration for the tenant",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LLMConfigurationDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "chatbotLlmConfiguration"
+        ]
+      },
       "UpdateTenantDto": {
         "type": "object",
         "properties": {
@@ -2892,6 +3769,9 @@
             "type": "boolean"
           },
           "builderLlmConfiguration": {
+            "$ref": "#/components/schemas/LLMConfigurationDto"
+          },
+          "chatbotLlmConfiguration": {
             "$ref": "#/components/schemas/LLMConfigurationDto"
           }
         }

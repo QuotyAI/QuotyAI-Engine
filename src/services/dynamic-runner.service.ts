@@ -258,10 +258,8 @@ export class DynamicRunnerService {
       // For unhappy path tests, we expect errors
       const hasExpectedError = result.errors && result.errors.some(error => {
         switch (expectedErrorType) {
-          case ExpectedErrorType.NOT_ENOUGH_DATA_TO_QUOTE:
-            return error.code === 'NOT_ENOUGH_DATA_TO_QUOTE';
-          case ExpectedErrorType.INCORRECT_ORDER_PARAMETER_VALUE:
-            return error.code === 'INCORRECT_ORDER_PARAMETER_VALUE';
+          case ExpectedErrorType.INCORRECT_INPUT_VALUE:
+            return error.code === 'INCORRECT_INPUT_VALUE';
           case ExpectedErrorType.QUOTATION_RULE_VIOLATION:
             return error.code === 'QUOTATION_RULE_VIOLATION';
           default:

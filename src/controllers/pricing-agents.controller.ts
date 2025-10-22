@@ -5,12 +5,34 @@ import { PricingAgent, PricingAgentCheckpoint } from '../models/mongodb.model';
 import { PricingAgentWithLatestCheckpoint } from 'src/dtos/pricing-agent-with-latest-checkpoint.dto';
 import { CreatePricingAgentDto } from '../dtos/create-pricing-agent.dto';
 import { AddHumanInputMessageDto } from '../dtos/add-input-message.dto';
+import { SetDeploymentStatusDto } from '../dtos/set-deployment-status.dto';
+import { BuildSchemaDto } from '../dtos/build-schema.dto';
+import { BuildFormulaDto } from '../dtos/build-formula.dto';
 import { isMultiTenancyEnabled } from '../config/multi-tenancy.config';
 import { AuthGuard } from '../auth/auth.guard';
 import { TestingDatasetService } from 'src/services/testing-dataset.service';
 import { AssignmentResultDto } from 'src/dtos/assignment-result.dto';
 import { TestingDatasetWithTestsDto } from 'src/dtos/testing-dataset-with-tests.dto';
 
+/**
+ * REST API controller for pricing agent management and AI-powered code generation.
+ *
+ * This controller provides comprehensive HTTP endpoints for managing pricing agents,
+ * their versioned checkpoints, and AI-generated code. It handles both CRUD operations
+ * for pricing agents and orchestrates the AI-powered generation of TypeScript schemas
+ * and pricing calculation functions.
+ *
+ * Key endpoints:
+ * - Pricing agent lifecycle management (create, read, update, delete)
+ * - Checkpoint history and versioning
+ * - Human input message management
+ * - AI schema generation with optional feedback
+ * - AI function generation with optional feedback
+ * - Testing dataset assignment and management
+ * - Deployment status control
+ *
+ * All endpoints support multi-tenant isolation and require authentication.
+ */
 @ApiTags('pricing-agents')
 @Controller('pricing-agents')
 @UseGuards(AuthGuard)
@@ -49,8 +71,9 @@ export class PricingAgentsController {
       const pricingAgentData = {
         tenantId,
         name: body.name,
+        isDeployed: false,
       };
-      const pricingAgent = await this.pricingAgentService.create(pricingAgentData);
+      const pricingAgent = await this.pricingAgentService.createPricingAgent(pricingAgentData);
       this.logger.log(`Created pricing agent with ID: ${pricingAgent._id}`);
 
       // Create an initial empty checkpoint
@@ -68,7 +91,7 @@ export class PricingAgentsController {
       this.logger.log(`Created initial checkpoint for pricing agent: ${pricingAgent._id}`);
 
       // Return the pricing agent with the latest checkpoint
-      const agentsWithCheckpoints = await this.pricingAgentService.findAllWithLatestCheckpoint(tenantId);
+      const agentsWithCheckpoints = await this.pricingAgentService.findAllPricingAgentsWithLatestCheckpoint(tenantId);
       const result = agentsWithCheckpoints.find(agent => agent._id!.equals(pricingAgent._id!))!;
       this.logger.log(`Successfully created pricing agent: ${body.name} with initial checkpoint`);
       return result;
@@ -100,7 +123,7 @@ export class PricingAgentsController {
         throw new HttpException('tenantId is required in multi-tenant mode', HttpStatus.BAD_REQUEST);
       }
 
-      const agents = await this.pricingAgentService.findAllWithLatestCheckpoint(tenantId);
+      const agents = await this.pricingAgentService.findAllPricingAgentsWithLatestCheckpoint(tenantId);
       this.logger.log(`Successfully retrieved ${agents.length} pricing agents for tenant: ${tenantId}`);
       return agents;
     } catch (error) {
@@ -116,16 +139,16 @@ export class PricingAgentsController {
     }
   }
 
-  @Get('/:id')
+  @Get('/:agentId')
   @ApiOperation({ summary: 'Get a specific pricing agent by ID' })
-  @ApiParam({ name: 'id', description: 'Pricing agent ID' })
+  @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
   @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID (required in multi-tenant mode)', required: false })
   @ApiResponse({ status: 200, description: 'Pricing agent retrieved successfully', type: PricingAgent })
   @ApiResponse({ status: 400, description: 'Bad request - tenantId required in multi-tenant mode' })
   @ApiResponse({ status: 404, description: 'Pricing agent not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async getPricingAgent(@Param('id') id: string, @Headers('X-Tenant-ID') tenantId?: string): Promise<PricingAgent> {
-    this.logger.log(`Getting pricing agent: ${id} for tenant: ${tenantId}`);
+  async getPricingAgent(@Param('agentId') agentId: string, @Headers('X-Tenant-ID') tenantId?: string): Promise<PricingAgent> {
+    this.logger.log(`Getting pricing agent: ${agentId} for tenant: ${tenantId}`);
 
     try {
       if (isMultiTenancyEnabled && !tenantId) {
@@ -133,15 +156,15 @@ export class PricingAgentsController {
         throw new HttpException('tenantId is required in multi-tenant mode', HttpStatus.BAD_REQUEST);
       }
 
-      const agent = await this.pricingAgentService.findOne(id, tenantId);
+      const agent = await this.pricingAgentService.findOnePricingAgent(agentId, tenantId);
       if (!agent) {
-        this.logger.warn(`Pricing agent not found: ${id} for tenant: ${tenantId}`);
+        this.logger.warn(`Pricing agent not found: ${agentId} for tenant: ${tenantId}`);
         throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
       }
-      this.logger.log(`Successfully retrieved pricing agent: ${agent.name} (${id})`);
+      this.logger.log(`Successfully retrieved pricing agent: ${agent.name} (${agentId})`);
       return agent;
     } catch (error) {
-      this.logger.error(`Failed to get pricing agent ${id}: ${error.message}`, error.stack);
+      this.logger.error(`Failed to get pricing agent ${agentId}: ${error.message}`, error.stack);
 
       if (error instanceof HttpException) {
         throw error;
@@ -153,20 +176,20 @@ export class PricingAgentsController {
     }
   }
 
-  @Put('/:id')
+  @Put('/:agentId')
   @ApiOperation({ summary: 'Update a pricing agent' })
-  @ApiParam({ name: 'id', description: 'Pricing agent ID' })
+  @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
   @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID (required in multi-tenant mode)', required: false })
   @ApiResponse({ status: 200, description: 'Pricing agent updated successfully', type: PricingAgent })
   @ApiResponse({ status: 400, description: 'Bad request - tenantId required in multi-tenant mode' })
   @ApiResponse({ status: 404, description: 'Pricing agent not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async updatePricingAgent(
-    @Param('id') id: string,
+    @Param('agentId') agentId: string,
     @Body() body: Partial<Omit<PricingAgent, '_id' | 'createdAt'>>,
     @Headers('X-Tenant-ID') tenantId?: string
   ): Promise<PricingAgent> {
-    this.logger.log(`Updating pricing agent: ${id} for tenant: ${tenantId}`);
+    this.logger.log(`Updating pricing agent: ${agentId} for tenant: ${tenantId}`);
 
     try {
       if (isMultiTenancyEnabled && !tenantId) {
@@ -174,15 +197,15 @@ export class PricingAgentsController {
         throw new HttpException('tenantId is required in multi-tenant mode', HttpStatus.BAD_REQUEST);
       }
 
-      const agent = await this.pricingAgentService.update(id, body, tenantId);
+      const agent = await this.pricingAgentService.updatePricingAgent(agentId, body, tenantId);
       if (!agent) {
-        this.logger.warn(`Pricing agent not found for update: ${id} for tenant: ${tenantId}`);
+        this.logger.warn(`Pricing agent not found for update: ${agentId} for tenant: ${tenantId}`);
         throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
       }
-      this.logger.log(`Successfully updated pricing agent: ${agent.name} (${id})`);
+      this.logger.log(`Successfully updated pricing agent: ${agent.name} (${agentId})`);
       return agent;
     } catch (error) {
-      this.logger.error(`Failed to update pricing agent ${id}: ${error.message}`, error.stack);
+      this.logger.error(`Failed to update pricing agent ${agentId}: ${error.message}`, error.stack);
 
       if (error instanceof HttpException) {
         throw error;
@@ -194,16 +217,16 @@ export class PricingAgentsController {
     }
   }
 
-  @Delete('/:id')
+  @Delete('/:agentId')
   @ApiOperation({ summary: 'Delete a pricing agent' })
-  @ApiParam({ name: 'id', description: 'Pricing agent ID' })
+  @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
   @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID (required in multi-tenant mode)', required: false })
   @ApiResponse({ status: 200, description: 'Pricing agent deleted successfully', schema: { type: 'object', properties: { deleted: { type: 'boolean' } } } })
   @ApiResponse({ status: 400, description: 'Bad request - tenantId required in multi-tenant mode' })
   @ApiResponse({ status: 404, description: 'Pricing agent not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async deletePricingAgent(@Param('id') id: string, @Headers('X-Tenant-ID') tenantId?: string): Promise<{ deleted: boolean }> {
-    this.logger.log(`Deleting pricing agent: ${id} for tenant: ${tenantId}`);
+  async deletePricingAgent(@Param('agentId') agentId: string, @Headers('X-Tenant-ID') tenantId?: string): Promise<{ deleted: boolean }> {
+    this.logger.log(`Deleting pricing agent: ${agentId} for tenant: ${tenantId}`);
 
     try {
       if (isMultiTenancyEnabled && !tenantId) {
@@ -211,21 +234,66 @@ export class PricingAgentsController {
         throw new HttpException('tenantId is required in multi-tenant mode', HttpStatus.BAD_REQUEST);
       }
 
-      const deleted = await this.pricingAgentService.delete(id, tenantId);
+      const deleted = await this.pricingAgentService.deletePricingAgent(agentId, tenantId);
       if (!deleted) {
-        this.logger.warn(`Pricing agent not found for deletion: ${id} for tenant: ${tenantId}`);
+        this.logger.warn(`Pricing agent not found for deletion: ${agentId} for tenant: ${tenantId}`);
         throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
       }
-      this.logger.log(`Successfully deleted pricing agent: ${id}`);
+      this.logger.log(`Successfully deleted pricing agent: ${agentId}`);
       return { deleted: true };
     } catch (error) {
-      this.logger.error(`Failed to delete pricing agent ${id}: ${error.message}`, error.stack);
+      this.logger.error(`Failed to delete pricing agent ${agentId}: ${error.message}`, error.stack);
 
       if (error instanceof HttpException) {
         throw error;
       }
       throw new HttpException(
         `Failed to delete pricing agent: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post('/:agentId/deployed')
+  @ApiOperation({ summary: 'Set the deployment status of a pricing agent' })
+  @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID (required in multi-tenant mode)', required: false })
+  @ApiResponse({ status: 200, description: 'Pricing agent deployment status set successfully', type: PricingAgent })
+  @ApiResponse({ status: 400, description: 'Bad request - tenantId required in multi-tenant mode or invalid parameters' })
+  @ApiResponse({ status: 404, description: 'Pricing agent not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async setPricingAgentDeployment(@Param('agentId') agentId: string, @Body() body: SetDeploymentStatusDto, @Headers('X-Tenant-ID') tenantId?: string): Promise<PricingAgent> {
+    this.logger.log(`Setting deployment status for pricing agent: ${agentId} to ${body.isDeployed} for tenant: ${tenantId}`);
+
+    try {
+      if (isMultiTenancyEnabled && !tenantId) {
+        this.logger.warn('tenantId is required in multi-tenant mode');
+        throw new HttpException('tenantId is required in multi-tenant mode', HttpStatus.BAD_REQUEST);
+      }
+
+      // Validate agent exists
+      const agent = await this.pricingAgentService.findOnePricingAgent(agentId, tenantId);
+      if (!agent) {
+        this.logger.warn(`Pricing agent not found: ${agentId} for tenant: ${tenantId}`);
+        throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
+      }
+
+      // Set the isDeployed field to the specified value
+      const updatedAgent = await this.pricingAgentService.updatePricingAgent(agentId, { isDeployed: body.isDeployed }, tenantId);
+      if (!updatedAgent) {
+        this.logger.warn(`Pricing agent not found for update: ${agentId} for tenant: ${tenantId}`);
+        throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
+      }
+      this.logger.log(`Successfully set deployment status for pricing agent: ${updatedAgent.name} (${agentId}) to ${updatedAgent.isDeployed}`);
+      return updatedAgent;
+    } catch (error) {
+      this.logger.error(`Failed to set deployment status for pricing agent ${agentId}: ${error.message}`, error.stack);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        `Failed to set deployment status: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
@@ -307,7 +375,7 @@ export class PricingAgentsController {
 
     try {
       // Validate agent exists
-      const agent = await this.pricingAgentService.findOne(agentId, tenantId);
+      const agent = await this.pricingAgentService.findOnePricingAgent(agentId, tenantId);
       if (!agent) {
         this.logger.warn(`Pricing agent not found: ${agentId} for tenant: ${tenantId}`);
         throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
@@ -340,66 +408,20 @@ export class PricingAgentsController {
     }
   }
 
-  @Post('/:agentId/build')
-  @ApiOperation({ summary: 'Build a complete pricing agent with schema and formula' })
-  @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
-  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
-  @ApiQuery({ name: 'checkpointId', description: 'Checkpoint ID (optional, uses latest if not provided)', required: false })
-  @ApiResponse({ status: 200, description: 'Agent built successfully', type: PricingAgentCheckpoint })
-  @ApiResponse({ status: 404, description: 'Pricing agent or checkpoint not found' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  async buildAgent(
-    @Param('agentId') agentId: string,
-    @Headers('X-Tenant-ID') tenantId?: string,
-    @Query('checkpointId') checkpointId?: string
-  ): Promise<PricingAgentCheckpoint> {
-    this.logger.log(`Building agent: ${agentId} for tenant: ${tenantId}`);
-
-    try {
-      // If checkpointId is not provided, get the latest checkpoint for the agent
-      let targetCheckpointId = checkpointId;
-      if (!targetCheckpointId) {
-        const latestCheckpoint = await this.pricingAgentService.findLatestCheckpoint(agentId, tenantId);
-        if (!latestCheckpoint) {
-          this.logger.warn(`No checkpoint found for agent build: ${agentId} for tenant: ${tenantId}`);
-          throw new HttpException('No checkpoint found for the specified agent', HttpStatus.NOT_FOUND);
-        }
-        targetCheckpointId = latestCheckpoint._id!.toString();
-      }
-
-      const checkpoint = await this.pricingAgentService.buildAgent(agentId, targetCheckpointId, tenantId);
-      if (!checkpoint) {
-        this.logger.warn(`Pricing agent or checkpoint not found for build: ${agentId}, checkpoint: ${targetCheckpointId}`);
-        throw new HttpException('Pricing agent or checkpoint not found', HttpStatus.NOT_FOUND);
-      }
-      this.logger.log(`Successfully built agent: ${agentId}, checkpoint: ${checkpoint._id}`);
-      return checkpoint;
-    } catch (error) {
-      this.logger.error(`Failed to build agent ${agentId}: ${error.message}`, error.stack);
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw new HttpException(
-        `Failed to build agent: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
-
   @Post('/:agentId/build/schema')
   @ApiOperation({ summary: 'Build schema only for pricing agent' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
   @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
   @ApiQuery({ name: 'checkpointId', description: 'Checkpoint ID (optional, uses latest if not provided)', required: false })
-  @ApiResponse({ status: 200, description: 'Schema built successfully', schema: { type: 'object', properties: { functionSchema: { type: 'string' } } } })
+  @ApiResponse({ status: 200, description: 'Schema built successfully', type: PricingAgentCheckpoint })
   @ApiResponse({ status: 404, description: 'Pricing agent or checkpoint not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async buildSchema(
     @Param('agentId') agentId: string,
+    @Body() body: BuildSchemaDto,
     @Headers('X-Tenant-ID') tenantId?: string,
     @Query('checkpointId') checkpointId?: string
-  ): Promise<{functionSchema: string}> {
+  ): Promise<PricingAgentCheckpoint> {
     this.logger.log(`Building schema for agent: ${agentId} for tenant: ${tenantId}`);
 
     try {
@@ -414,13 +436,13 @@ export class PricingAgentsController {
         targetCheckpointId = latestCheckpoint._id!.toString();
       }
 
-      const checkpoint = await this.pricingAgentService.buildSchemaOnly(agentId, targetCheckpointId, tenantId);
+      const checkpoint = await this.pricingAgentService.buildSchemaOnly(agentId, targetCheckpointId, body.feedback, tenantId);
       if (!checkpoint) {
         this.logger.warn(`Pricing agent or checkpoint not found for schema build: ${agentId}, checkpoint: ${targetCheckpointId}`);
         throw new HttpException('Pricing agent or checkpoint not found', HttpStatus.NOT_FOUND);
       }
       this.logger.log(`Successfully built schema for agent: ${agentId}, checkpoint: ${checkpoint._id}`);
-      return { functionSchema: checkpoint.functionSchema || '' };
+      return checkpoint;
     } catch (error) {
       this.logger.error(`Failed to build schema for agent ${agentId}: ${error.message}`, error.stack);
 
@@ -444,6 +466,7 @@ export class PricingAgentsController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async buildFormula(
     @Param('agentId') agentId: string,
+    @Body() body: BuildFormulaDto,
     @Headers('X-Tenant-ID') tenantId?: string,
     @Query('checkpointId') checkpointId?: string
   ): Promise<PricingAgentCheckpoint> {
@@ -461,7 +484,7 @@ export class PricingAgentsController {
         targetCheckpointId = latestCheckpoint._id!.toString();
       }
 
-      const checkpoint = await this.pricingAgentService.buildFormulaOnly(agentId, targetCheckpointId, tenantId);
+      const checkpoint = await this.pricingAgentService.buildFormulaOnly(agentId, targetCheckpointId, body.feedback, tenantId);
       if (!checkpoint) {
         this.logger.warn(`Pricing agent or checkpoint not found for formula build: ${agentId}, checkpoint: ${targetCheckpointId}`);
         throw new HttpException('Pricing agent or checkpoint not found', HttpStatus.NOT_FOUND);
@@ -498,7 +521,7 @@ export class PricingAgentsController {
 
     try {
       // Validate agent exists
-      const agent = await this.pricingAgentService.findOne(agentId, tenantId);
+      const agent = await this.pricingAgentService.findOnePricingAgent(agentId, tenantId);
       if (!agent) {
         this.logger.warn(`Pricing agent not found: ${agentId} for tenant: ${tenantId}`);
         throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
@@ -543,7 +566,7 @@ export class PricingAgentsController {
 
     try {
       // Validate agent exists
-      const agent = await this.pricingAgentService.findOne(agentId, tenantId);
+      const agent = await this.pricingAgentService.findOnePricingAgent(agentId, tenantId);
       if (!agent) {
         this.logger.warn(`Pricing agent not found: ${agentId} for tenant: ${tenantId}`);
         throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
@@ -576,7 +599,7 @@ export class PricingAgentsController {
     }
   }
 
-  @Post(':agentId/checkpoints/:checkpointId/datasets/:datasetId')
+  @Post('/:agentId/datasets/:datasetId')
   @ApiOperation({ summary: 'Assign a testing dataset to a pricing agent checkpoint' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
   @ApiParam({ name: 'datasetId', description: 'Testing dataset ID' })
@@ -594,7 +617,7 @@ export class PricingAgentsController {
 
     try {
       // Validate agent exists
-      const agent = await this.pricingAgentService.findOne(agentId, tenantId);
+      const agent = await this.pricingAgentService.findOnePricingAgent(agentId, tenantId);
       if (!agent) {
         this.logger.warn(`Pricing agent not found: ${agentId} for tenant: ${tenantId}`);
         throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
@@ -638,7 +661,52 @@ export class PricingAgentsController {
     }
   }
 
-  @Post('pricing-agents/:agentId/build/dataset')
+  @Delete('/:agentId/datasets/:datasetId')
+  @ApiOperation({ summary: 'Unassign a testing dataset from a pricing agent checkpoint' })
+  @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
+  @ApiParam({ name: 'datasetId', description: 'Testing dataset ID' })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
+  @ApiResponse({ status: 200, description: 'Testing dataset unassigned successfully', schema: { type: 'object', properties: { unassigned: { type: 'boolean' } } } })
+  @ApiResponse({ status: 404, description: 'Pricing agent or dataset assignment not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async unassignTestingDataset(
+    @Param('agentId') agentId: string,
+    @Param('datasetId') datasetId: string,
+    @Headers('X-Tenant-ID') tenantId?: string
+  ): Promise<{ unassigned: boolean }> {
+    this.logger.log(`Unassigning testing dataset: ${datasetId} from agent: ${agentId} for tenant: ${tenantId}`);
+
+    try {
+      // Validate agent exists
+      const agent = await this.pricingAgentService.findOnePricingAgent(agentId, tenantId);
+      if (!agent) {
+        this.logger.warn(`Pricing agent not found: ${agentId} for tenant: ${tenantId}`);
+        throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
+      }
+
+      const unassigned = await this.testingDatasetService.unassignTestingDataset(agentId, datasetId, tenantId);
+
+      if (!unassigned) {
+        this.logger.warn(`Testing dataset assignment not found: dataset ${datasetId} for agent ${agentId}`);
+        throw new HttpException('Testing dataset assignment not found', HttpStatus.NOT_FOUND);
+      }
+
+      this.logger.log(`Successfully unassigned testing dataset: ${datasetId} from agent: ${agentId}`);
+      return { unassigned: true };
+    } catch (error) {
+      this.logger.error(`Failed to unassign testing dataset ${datasetId} from agent ${agentId}: ${error.message}`, error.stack);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        `Failed to unassign testing dataset: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post('/:agentId/datasets/build/')
   @ApiOperation({ summary: 'AI generate testing dataset' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
   @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
@@ -671,13 +739,13 @@ export class PricingAgentsController {
         throw new HttpException('Checkpoint not found', HttpStatus.NOT_FOUND);
       }
 
-      const agent = await this.pricingAgentService.findOne(agentId, tenantId);
+      const agent = await this.pricingAgentService.findOnePricingAgent(agentId, tenantId);
       if (!agent) {
         this.logger.warn(`Pricing agent not found for tests build: ${agentId}`);
         throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
       }
 
-      const result = await this.testingDatasetService.aiGenerateDataset(checkpoint, agent.name);
+      const result = await this.testingDatasetService.aiGenerateDataset(checkpoint, agent.name, tenantId);
 
       this.logger.log(`Successfully built tests for agent: ${agentId}, checkpoint: ${checkpoint._id}`);
 

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as admin from 'firebase-admin';
-import { AuthProvider, AuthUser } from './auth-provider.interface';
+import { AuthProvider, AuthUser, CustomClaims, CreateUserOptions } from './auth-provider.interface';
 
 @Injectable()
 export class FirebaseAuthProvider implements AuthProvider {
@@ -36,8 +36,8 @@ export class FirebaseAuthProvider implements AuthProvider {
         id: userRecord.uid,
         email: userRecord.email || '',
         emailVerified: userRecord.emailVerified,
-        role: (userRecord.customClaims as any)?.role || 'user',
-        tenantId: (userRecord.customClaims as any)?.tenantId,
+        role: (userRecord.customClaims as CustomClaims)?.role || 'user',
+        tenantId: (userRecord.customClaims as CustomClaims)?.tenantId,
         provider: 'firebase',
         providerId: userRecord.uid,
         metadata: {
@@ -53,7 +53,7 @@ export class FirebaseAuthProvider implements AuthProvider {
     }
   }
 
-  async createUser(email: string, password: string, options?: any): Promise<AuthUser> {
+  async createUser(email: string, password: string, options?: CreateUserOptions): Promise<AuthUser> {
     try {
       const userRecord = await admin.auth().createUser({
         email,

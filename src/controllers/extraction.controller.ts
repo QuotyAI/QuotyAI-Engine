@@ -1,8 +1,9 @@
-import { Controller, Post, Body, HttpException, HttpStatus, Logger, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Headers, Post, Body, HttpException, HttpStatus, Logger, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
 import { AiPricingTableExtractionAgentService } from '../ai-agents/ai-pricing-table-extraction.agent';
 import { ExtractedPricingTable, PricingTableExtractionRequest } from 'src/dtos/text-extraction.dto';
 import { AuthGuard } from '../auth/auth.guard';
+import { LLMService } from 'src/ai-agents/llm.service';
 
 @ApiTags('extraction')
 @Controller('extraction')
@@ -11,17 +12,21 @@ export class ExtractionController {
   private readonly logger = new Logger(ExtractionController.name);
 
   constructor(
-    private readonly pricingTableExtractionAgent: AiPricingTableExtractionAgentService
+    private readonly pricingTableExtractionAgent: AiPricingTableExtractionAgentService,
+    private readonly llmService: LLMService,
   ) {
     this.logger.log('PricingTableExtractionController initialized');
   }
 
   @Post('extract')
   @ApiOperation({ summary: 'Extract pricing table from image' })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
   @ApiResponse({ status: 200, description: 'Pricing table extracted successfully', type: ExtractedPricingTable })
   @ApiResponse({ status: 400, description: 'Bad request - invalid image data' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async extractPricingTable(@Body() body: PricingTableExtractionRequest): Promise<ExtractedPricingTable> {
+  async extractPricingTable(
+    @Body() body: PricingTableExtractionRequest,
+    @Headers('X-Tenant-ID') tenantId?: string): Promise<ExtractedPricingTable> {
     this.logger.log(`Extracting pricing table from image (${body.imageMimeType})`);
 
     try {
@@ -52,7 +57,8 @@ export class ExtractionController {
         );
       }
 
-      const result = await this.pricingTableExtractionAgent.extractPricingTable(body);
+      const llmConfig = await this.llmService.getTenantLLMConfig(tenantId);
+      const result = await this.pricingTableExtractionAgent.extractPricingTable(body, llmConfig);
       this.logger.log(`Successfully extracted pricing table (confidence: ${result.confidence})`);
 
       return result;

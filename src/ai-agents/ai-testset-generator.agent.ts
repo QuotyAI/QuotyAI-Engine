@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { SystemMessage, HumanMessage } from '@langchain/core/messages';
+import { initChatModel } from 'langchain/chat_models/universal';
 import { z } from 'zod';
-import { HappyPathTestData, UnhappyPathTestData, CheckpointHappyPathTestRun, CheckpointUnhappyPathTestRun, PricingAgentCheckpoint, DatasetHappyPathTestData, DatasetUnhappyPathTestData } from '../models/mongodb.model';
-import { LLMService, LLMServiceConfig } from './llm.service';
+import { CheckpointHappyPathTestRun, CheckpointUnhappyPathTestRun, PricingAgentCheckpoint, DatasetHappyPathTestData, DatasetUnhappyPathTestData } from '../models/mongodb.model';
+import { LangchainInitModelConfig } from './llm.service';
 
 export interface TypedOrderInputGenerationRequest {
   happyPathTests: DatasetHappyPathTestData[];
@@ -27,16 +27,18 @@ const TypedOrderInputSchema = z.object({
 export class AiTestsetGenerationAgentService {
   private readonly logger = new Logger(AiTestsetGenerationAgentService.name);
 
-  constructor(private readonly llmService: LLMService) {
+  constructor() {
     this.logger.log('AiTestsetGenerationAgentService initialized');
   }
 
-  async generateTypedOrderInputs(request: TypedOrderInputGenerationRequest, llmConfig?: LLMServiceConfig): Promise<GeneratedTypedOrderInputs> {
+  async generateTypedOrderInputs(request: TypedOrderInputGenerationRequest, llmConfig: LangchainInitModelConfig): Promise<GeneratedTypedOrderInputs> {
     this.logger.log(`Generating typed order inputs from test data`);
 
     try {
-      // Get the LLM instance
-      const llm = await this.llmService.getLLM(llmConfig);
+      // Create LLM instance directly using initChatModel
+      const llm = await initChatModel(llmConfig.model, {
+        ...llmConfig.additionalConfig,
+      });
 
       // Generate the prompt using the embedded template
       if (!request.checkpoint.functionSchema) {

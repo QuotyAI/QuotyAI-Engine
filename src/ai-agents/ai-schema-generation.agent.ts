@@ -1,34 +1,53 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HumanMessage } from '@langchain/core/messages';
-import { LLMService, LLMServiceConfig } from './llm.service';
+import { initChatModel } from 'langchain/chat_models/universal';
+import { LangchainInitModelConfig } from './llm.service';
 
 export interface SchemaGenerationRequest {
   inputMessage: string;
+  feedback?: string;
+  currentSchema?: string;
 }
 
 export interface GeneratedSchema {
   code: string;
 }
 
+/**
+ * AI-powered service for generating TypeScript type definitions and schemas
+ * from natural language descriptions of pricing and business rules.
+ *
+ * This service uses large language models to analyze input messages containing
+ * pricing descriptions and automatically generate appropriate TypeScript interfaces,
+ * enums, and types for order input validation in pricing systems.
+ *
+ * Key features:
+ * - Generates discriminated union types for type safety
+ * - Creates enums for fixed categorical options
+ * - Includes comprehensive JSDoc documentation
+ * - Supports feedback-based regeneration for iterative improvement
+ */
 @Injectable()
 export class AiSchemaGenerationAgentService {
   private readonly logger = new Logger(AiSchemaGenerationAgentService.name);
 
-  constructor(private readonly llmService: LLMService) {
+  constructor() {
     this.logger.log('AiSchemaGenerationAgentService initialized');
   }
 
-  async generateInputTypes(request: SchemaGenerationRequest, llmConfig?: LLMServiceConfig): Promise<GeneratedSchema> {
+  async generateInputTypes(request: SchemaGenerationRequest, llmConfig: LangchainInitModelConfig): Promise<GeneratedSchema> {
     this.logger.log(`Generating input types`);
 
     try {
       // Generate the prompt using the embedded template
-      const prompt = this.generatePrompt(request.inputMessage);
+      const prompt = this.generatePrompt(request);
 
       this.logger.debug(`Prompt generated: ${prompt.length} characters`);
 
-      // Get the LLM instance
-      const llm = await this.llmService.getLLM(llmConfig);
+      // Create LLM instance directly using initChatModel
+      const llm = await initChatModel(llmConfig.model, {
+        ...llmConfig.additionalConfig,
+      });
 
       // Generate the TypeScript types
       const result = await llm.invoke([new HumanMessage(prompt)]);
@@ -45,7 +64,7 @@ export class AiSchemaGenerationAgentService {
     }
   }
 
-  private generatePrompt(inputMessage: string): string {
+  private generatePrompt(request: SchemaGenerationRequest): string {
     return `<role>You are an expert TypeScript developer specializing in creating TypeScript types, interfaces, and enums from natural language service descriptions, focusing on input validation for order processing systems.</role>
 
 <task>Based on the provided natural language description of pricing and business rules, generate a complete set of TypeScript types, interfaces, and enums for customer order input validation.
@@ -150,7 +169,17 @@ export interface OrderInput {
 }
 </example>
 
-<pricing-rules-in-natural-language${inputMessage}</pricing-rules-in-natural-language>
+<pricing-rules-in-natural-language>
+${request.inputMessage}
+</pricing-rules-in-natural-language>
+
+${request.currentSchema ? `<current-schema>
+${request.currentSchema}
+</current-schema>` : ''}
+
+${request.feedback ? `<user-feedback>
+${request.feedback}
+</user-feedback>` : ''}
 
 <constraints>
 - Define native TypeScript enums for all fixed categorical options

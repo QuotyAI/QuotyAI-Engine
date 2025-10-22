@@ -1,10 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { SystemMessage, HumanMessage } from '@langchain/core/messages';
-import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
 import { ExtractedPricingTable, PricingTableExtractionRequest } from 'src/dtos/text-extraction.dto';
-import { LLMService, LLMServiceConfig } from './llm.service';
+import { LLMService, LangchainInitModelConfig } from './llm.service';
+import { initChatModel } from 'langchain/chat_models/universal';
 
 
 @Injectable()
@@ -15,7 +14,7 @@ export class AiPricingTableExtractionAgentService {
     this.logger.log('AiPricingTableExtractionAgentService initialized');
   }
 
-  async extractPricingTable(request: PricingTableExtractionRequest, llmConfig?: LLMServiceConfig): Promise<ExtractedPricingTable> {
+  async extractPricingTable(request: PricingTableExtractionRequest, llmConfig: LangchainInitModelConfig): Promise<ExtractedPricingTable> {
     this.logger.log(`Extracting pricing table from image (${request.imageMimeType})`);
 
     try {
@@ -24,9 +23,7 @@ export class AiPricingTableExtractionAgentService {
 
       this.logger.debug(`Prompt generated: ${prompt.length} characters`);
 
-      // Get the LLM instance
-      const llm = await this.llmService.getLLM(llmConfig);
-
+      
       // Create image message for the LLM
       const imageMessage = {
         type: 'image_url' as const,
@@ -34,6 +31,10 @@ export class AiPricingTableExtractionAgentService {
           url: `data:${request.imageMimeType};base64,${request.imageData}`,
         },
       };
+
+      const llm = await initChatModel(llmConfig.model, {
+        ...llmConfig.additionalConfig,
+      });
 
       // Extract pricing table using vision capabilities
       const result = await llm.invoke([

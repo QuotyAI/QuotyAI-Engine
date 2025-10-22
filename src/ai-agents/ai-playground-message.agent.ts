@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 import { QuoteResult } from '../models/mongodb.model';
-import { LLMService, LLMServiceConfig } from './llm.service';
+import { LLMService, LangchainInitModelConfig } from './llm.service';
+import { initChatModel } from 'langchain/chat_models/universal';
 
 export interface PlaygroundMessageGenerationRequest {
   conversation: Array<{
@@ -30,7 +30,7 @@ export class AiPlaygroundMessageAgentService {
     this.logger.log('AiPlaygroundMessageAgentService initialized');
   }
 
-  async generatePlaygroundMessage(request: PlaygroundMessageGenerationRequest, llmConfig?: LLMServiceConfig): Promise<PlaygroundMessageGenerationResponse> {
+  async generatePlaygroundMessage(request: PlaygroundMessageGenerationRequest, llmConfig: LangchainInitModelConfig): Promise<PlaygroundMessageGenerationResponse> {
     this.logger.log(`Generating AI playground message`);
 
     try {
@@ -39,9 +39,11 @@ export class AiPlaygroundMessageAgentService {
 
       this.logger.debug(`Prompt generated: ${prompt.systemPrompt.length} characters`);
 
-      // Get the LLM instance
-      const llm = await this.llmService.getLLM(llmConfig);
-
+      // Create LLM instance directly using initChatModel
+      const llm = await initChatModel(llmConfig.model, {
+        ...llmConfig.additionalConfig,
+      });
+      
       // Generate the AI message
       const result = await llm.invoke([
         new SystemMessage(prompt.systemPrompt),

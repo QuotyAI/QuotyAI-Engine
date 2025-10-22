@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { z } from 'zod';
-import { LLMService, LLMServiceConfig } from './llm.service';
+import { LangchainInitModelConfig } from './llm.service';
+import { initChatModel } from 'langchain/chat_models/universal';
 
 export interface DemoConversationGenerationRequest {
   pricingAgentContext: string;
@@ -30,11 +30,11 @@ const DemoConversationSchema = z.object({
 export class AiDemoConversationAgentService {
   private readonly logger = new Logger(AiDemoConversationAgentService.name);
 
-  constructor(private readonly llmService: LLMService) {
+  constructor() {
     this.logger.log('AiDemoConversationAgentService initialized');
   }
 
-  async generateDemoConversation(request: DemoConversationGenerationRequest, llmConfig?: LLMServiceConfig): Promise<DemoConversationGenerationResponse> {
+  async generateDemoConversation(request: DemoConversationGenerationRequest, llmConfig: LangchainInitModelConfig): Promise<DemoConversationGenerationResponse> {
     this.logger.log(`Generating demo conversation for pricing agent`);
 
     try {
@@ -44,7 +44,9 @@ export class AiDemoConversationAgentService {
       this.logger.debug(`Prompt generated: ${prompt.systemPrompt.length} characters`);
 
       // Get the LLM instance
-      const llm = await this.llmService.getLLM(llmConfig);
+      const llm = await initChatModel(llmConfig.model, {
+        ...llmConfig.additionalConfig,
+      });
 
       // Generate the demo conversation
       const result = await llm.invoke([

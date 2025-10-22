@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { AuthProvider, AuthUser } from './auth-provider.interface';
+import { AuthProvider, AuthUser, CreateUserOptions } from './auth-provider.interface';
 
 @Injectable()
 export class AuthService {
@@ -53,7 +53,7 @@ export class AuthService {
     email: string,
     password: string,
     providerName = 'firebase',
-    options?: any,
+    options?: CreateUserOptions,
   ): Promise<AuthUser> {
     const provider = this.getProvider(providerName);
     if (!provider) {

@@ -1,5 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { Db, ObjectId, Filter, Document } from 'mongodb';
+import { Db, ObjectId, Filter } from 'mongodb';
 import { randomUUID } from 'crypto';
 import {
   PricingAgentCheckpoint,
@@ -10,9 +10,7 @@ import { PricingAgentWithLatestCheckpoint } from 'src/dtos/pricing-agent-with-la
 import { AddHumanInputMessageDto } from '../dtos/add-input-message.dto';
 import { AiSchemaGenerationAgentService } from '../ai-agents/ai-schema-generation.agent';
 import { AiFormulaGenerationAgentService } from '../ai-agents/ai-formula-generation.agent';
-import { AiHappyPathDatasetGenerationAgentService } from '../ai-agents/ai-happy-path-dataset-generation.agent';
-import { TenantService } from './tenant.service';
-import { LLMService, LLMServiceConfig } from '../ai-agents/llm.service';
+import { LLMService } from '../ai-agents/llm.service';
 
 type PricingAgentFilter = Filter<PricingAgent>;
 type CheckpointFilter = Filter<PricingAgentCheckpoint>;
@@ -23,6 +21,22 @@ type CheckpointMatchCondition = {
 };
 type CheckpointMap = Map<string, PricingAgentCheckpoint>;
 
+/**
+ * Core service for managing pricing agents, checkpoints, and AI-powered code generation.
+ *
+ * This service provides comprehensive CRUD operations for pricing agents and their
+ * versioned checkpoints. It orchestrates the AI-powered generation of both TypeScript
+ * schemas and pricing calculation functions, managing the complete lifecycle of
+ * pricing agent development from initial creation through iterative refinement.
+ *
+ * Key responsibilities:
+ * - Pricing agent lifecycle management (create, read, update, delete)
+ * - Checkpoint versioning and history tracking
+ * - AI schema generation from natural language descriptions
+ * - AI function generation with business rule implementation
+ * - Feedback-based regeneration for iterative improvement
+ * - Multi-tenant data isolation and access control
+ */
 @Injectable()
 export class PricingAgentService {
   private readonly logger = new Logger(PricingAgentService.name);
@@ -31,8 +45,6 @@ export class PricingAgentService {
     @Inject('DATABASE_CONNECTION') private db: Db,
     private readonly aiSchemaGenerationAgent: AiSchemaGenerationAgentService,
     private readonly aiFormulaGenerationAgent: AiFormulaGenerationAgentService,
-    private readonly aiHappyPathDatasetGenerationAgent: AiHappyPathDatasetGenerationAgentService,
-    private readonly tenantService: TenantService,
     private readonly llmService: LLMService,
   ) {
     this.logger.log('PricingAgentService initialized');
@@ -62,44 +74,14 @@ export class PricingAgentService {
     return filter;
   }
 
-  private extractPricingDescription(checkpoint: PricingAgentCheckpoint): string {
+  private extractPricingDescriptionFromHumanMessages(checkpoint: PricingAgentCheckpoint): string {
     return checkpoint.humanInputMessages
       .map(msg => msg.message || '')
       .filter(msg => msg.trim())
       .join('\n');
   }
 
-  private async getTenantLLMConfig(tenantId?: string): Promise<LLMServiceConfig | undefined> {
-    if (!tenantId) {
-      return undefined; // Use default configuration
-    }
-
-    try {
-      const tenant = await this.tenantService.getTenantById(tenantId);
-      if (tenant?.builderLlmConfiguration) {
-        const validation = this.llmService.validateLLMConfig(tenant.builderLlmConfiguration);
-        if (validation.isValid) {
-          return {
-            provider: tenant.builderLlmConfiguration.provider,
-            model: tenant.builderLlmConfiguration.model,
-            apiKey: tenant.builderLlmConfiguration.apiKey,
-            baseUrl: tenant.builderLlmConfiguration.baseUrl,
-            additionalConfig: tenant.builderLlmConfiguration.additionalConfig,
-          };
-        } else {
-          this.logger.warn(`Invalid LLM configuration for tenant ${tenantId}: ${validation.errors.join(', ')}`);
-        }
-      }
-    } catch (error) {
-      this.logger.error(`Failed to get LLM configuration for tenant ${tenantId}: ${error.message}`);
-    }
-
-    return undefined; // Fall back to default configuration
-  }
-
-
-
-  async create(pricingAgent: Omit<PricingAgent, '_id' | 'createdAt'>): Promise<PricingAgent> {
+  async createPricingAgent(pricingAgent: Omit<PricingAgent, '_id' | 'createdAt'>): Promise<PricingAgent> {
     this.logger.log(`Creating pricing agent: ${pricingAgent.name} for tenant: ${pricingAgent.tenantId}`);
 
     try {
@@ -123,7 +105,7 @@ export class PricingAgentService {
     }
   }
 
-  async findAll(tenantId?: string): Promise<PricingAgent[]> {
+  async findAllPricingAgents(tenantId?: string): Promise<PricingAgent[]> {
     this.logger.log(`Finding all pricing agents for tenant: ${tenantId}`);
 
     try {
@@ -138,7 +120,7 @@ export class PricingAgentService {
     }
   }
 
-  async findAllWithLatestCheckpoint(tenantId?: string): Promise<PricingAgentWithLatestCheckpoint[]> {
+  async findAllPricingAgentsWithLatestCheckpoint(tenantId?: string): Promise<PricingAgentWithLatestCheckpoint[]> {
     this.logger.log(`Finding all pricing agents with latest checkpoints for tenant: ${tenantId}`);
 
     try {
@@ -199,7 +181,7 @@ export class PricingAgentService {
     }
   }
 
-  async findOne(id: string, tenantId?: string): Promise<PricingAgent | null> {
+  async findOnePricingAgent(id: string, tenantId?: string): Promise<PricingAgent | null> {
     this.logger.log(`Finding pricing agent: ${id} for tenant: ${tenantId}`);
 
     try {
@@ -219,13 +201,13 @@ export class PricingAgentService {
     }
   }
 
-  async update(id: string, updateData: Partial<Omit<PricingAgent, '_id' | 'createdAt'>>, tenantId?: string): Promise<PricingAgent | null> {
+  async updatePricingAgent(id: string, updateData: Partial<Omit<PricingAgent, '_id' | 'createdAt'>>, tenantId?: string): Promise<PricingAgent | null> {
     this.logger.log(`Updating pricing agent: ${id} for tenant: ${tenantId}`);
 
     try {
       const filter = this.buildPricingAgentFilter(tenantId, { _id: new ObjectId(id) });
       await this.collection.updateOne(filter, { $set: updateData });
-      const updatedAgent = await this.findOne(id, tenantId);
+      const updatedAgent = await this.findOnePricingAgent(id, tenantId);
 
       if (updatedAgent) {
         this.logger.log(`Successfully updated pricing agent: ${updatedAgent.name} (${id})`);
@@ -240,7 +222,7 @@ export class PricingAgentService {
     }
   }
 
-  async delete(id: string, tenantId?: string): Promise<boolean> {
+  async deletePricingAgent(id: string, tenantId?: string): Promise<boolean> {
     this.logger.log(`Soft deleting pricing agent: ${id} for tenant: ${tenantId}`);
 
     try {
@@ -331,7 +313,6 @@ export class PricingAgentService {
     const newCheckpoint: PricingAgentCheckpoint = {
       ...sourceCheckpoint,
       _id: undefined, // Will be set by MongoDB
-      version: sourceCheckpoint.version + 1,
       humanInputMessages: [...sourceCheckpoint.humanInputMessages] as HumanInputMessage[], // Clone the array
       functionSchema: '',
       functionCode: '',
@@ -369,7 +350,6 @@ export class PricingAgentService {
     const newCheckpoint: PricingAgentCheckpoint = {
       ...sourceCheckpoint,
       _id: undefined, // Will be set by MongoDB
-      version: sourceCheckpoint.version + 1,
       humanInputMessages: [...sourceCheckpoint.humanInputMessages] as HumanInputMessage[], // Clone the array
       checkpointTrigger: 'input_message_deleted',
       createdAt: new Date(),
@@ -382,97 +362,75 @@ export class PricingAgentService {
     return this.createCheckpoint(newCheckpoint);
   }
 
-  async buildAgent(pricingAgentId: string, checkpointId: string, tenantId?: string): Promise<PricingAgentCheckpoint | null> {
+  async buildSchemaOnly(pricingAgentId: string, checkpointId: string, feedback?: string, tenantId?: string): Promise<PricingAgentCheckpoint | null> {
     const sourceCheckpoint = await this.findOneCheckpoint(checkpointId, tenantId);
     if (!sourceCheckpoint) {
       return null; // Checkpoint not found
     }
 
-    const pricingDescription = this.extractPricingDescription(sourceCheckpoint);
-
-    if (!pricingDescription.trim()) {
-      throw new Error('No input messages found to generate schema and function');
-    }
-
-    // Generate schema
-    const schemaResult = await this.aiSchemaGenerationAgent.generateInputTypes({
-      inputMessage: pricingDescription,
-    });
-
-    // Generate function
-    const functionResult = await this.aiFormulaGenerationAgent.generatePricingFunction({
-      pricingDescription: pricingDescription,
-      schema: schemaResult.code,
-    });
-
-    // Generate test scenarios
-    const happyPathScenarios = await this.aiHappyPathDatasetGenerationAgent.generateHappyPathScenarios(
-      pricingDescription,
-      schemaResult.code,
-      functionResult.code,
-    );
-
-    // TODO: Unhappy
-
-    throw new Error('Not implemented yet');
-  }
-
-  async buildSchemaOnly(pricingAgentId: string, checkpointId: string, tenantId?: string): Promise<PricingAgentCheckpoint | null> {
-    const sourceCheckpoint = await this.findOneCheckpoint(checkpointId, tenantId);
-    if (!sourceCheckpoint) {
-      return null; // Checkpoint not found
-    }
-
-    const pricingDescription = this.extractPricingDescription(sourceCheckpoint);
+    const pricingDescription = this.extractPricingDescriptionFromHumanMessages(sourceCheckpoint);
 
     if (!pricingDescription.trim()) {
       throw new Error('No input messages found to generate schema');
     }
 
-    // Get tenant's LLM configuration
-    const llmConfig = await this.getTenantLLMConfig(tenantId);
+    // Get tenant LLM config (will throw error for free tier tenants without BYOK)
+    const llmConfig = await this.llmService.getTenantLLMConfig(tenantId);
 
     // Generate only schema
     const schemaResult = await this.aiSchemaGenerationAgent.generateInputTypes({
       inputMessage: pricingDescription,
+      feedback: feedback,
+      currentSchema: sourceCheckpoint.functionSchema || undefined,
     }, llmConfig);
 
-    // Update existing checkpoint with generated schema only
-    const updateData = {
-      functionSchema: schemaResult.code
+    // Create new checkpoint with generated schema
+    const newCheckpoint: PricingAgentCheckpoint = {
+      ...sourceCheckpoint,
+      _id: undefined, // Will be set by MongoDB
+      functionSchema: schemaResult.code,
+      functionCode: '', // Clear function code for new schema generation
+      checkpointTrigger: 'function_order_schema_updated',
+      createdAt: new Date(),
+      checkpointDescription: feedback ? `Schema regenerated with feedback: ${feedback}` : 'Schema generated',
     };
 
-    return this.updateCheckpoint(checkpointId, updateData, tenantId);
+    return this.createCheckpoint(newCheckpoint);
   }
 
-  async buildFormulaOnly(pricingAgentId: string, checkpointId: string, tenantId?: string): Promise<PricingAgentCheckpoint | null> {
+  async buildFormulaOnly(pricingAgentId: string, checkpointId: string, feedback?: string, tenantId?: string): Promise<PricingAgentCheckpoint | null> {
     const sourceCheckpoint = await this.findOneCheckpoint(checkpointId, tenantId);
     if (!sourceCheckpoint) {
       return null; // Checkpoint not found
     }
 
-    const pricingDescription = this.extractPricingDescription(sourceCheckpoint);
+    const pricingDescription = this.extractPricingDescriptionFromHumanMessages(sourceCheckpoint);
 
     if (!pricingDescription.trim()) {
       throw new Error('No input messages found to generate function');
     }
 
-    // Get tenant's LLM configuration
-    const llmConfig = await this.getTenantLLMConfig(tenantId);
+    // Get tenant LLM config (will throw error for free tier tenants without BYOK)
+    const llmConfig = await this.llmService.getTenantLLMConfig(tenantId);
 
     // Generate only function
     const functionResult = await this.aiFormulaGenerationAgent.generatePricingFunction({
       pricingDescription: pricingDescription,
       schema: sourceCheckpoint.functionSchema || '',
+      feedback: feedback,
+      currentFunction: sourceCheckpoint.functionCode || undefined,
     }, llmConfig);
 
-    // Update existing checkpoint with generated function only
-    const updateData = {
-      functionCode: functionResult.code
+    // Create new checkpoint with generated function
+    const newCheckpoint: PricingAgentCheckpoint = {
+      ...sourceCheckpoint,
+      _id: undefined, // Will be set by MongoDB
+      functionCode: functionResult.code,
+      checkpointTrigger: 'function_formula_code_updated',
+      createdAt: new Date(),
+      checkpointDescription: feedback ? `Function regenerated with feedback: ${feedback}` : 'Function generated',
     };
 
-    return this.updateCheckpoint(checkpointId, updateData, tenantId);
+    return this.createCheckpoint(newCheckpoint);
   }
-
-
 }

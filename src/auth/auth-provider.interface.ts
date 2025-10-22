@@ -12,11 +12,36 @@ export interface AuthUser {
   };
 }
 
+export interface CreateUserOptions {
+  role?: string;
+  tenantId?: string;
+  displayName?: string;
+  emailVerified?: boolean;
+}
+
+export interface CustomClaims {
+  role?: string;
+  tenantId?: string;
+}
+
+import { ObjectId } from 'mongodb';
+
+export interface ApiKeyResponse {
+  key: string;
+  apiKey: {
+    _id?: ObjectId;
+    name: string;
+    tenantId: ObjectId;
+    expiresAt?: Date;
+    createdAt: Date;
+  };
+}
+
 export interface AuthProvider {
   name: string;
 
   /**
-   * Verify a Firebase ID token and return user information
+   * Verify a token and return user information
    */
   verifyToken(token: string): Promise<AuthUser>;
 
@@ -28,7 +53,7 @@ export interface AuthProvider {
   /**
    * Create a user (if supported by provider)
    */
-  createUser?(email: string, password: string, options?: any): Promise<AuthUser>;
+  createUser?(email: string, password: string, options?: CreateUserOptions): Promise<AuthUser>;
 
   /**
    * Delete a user (if supported by provider)

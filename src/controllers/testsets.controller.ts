@@ -2,10 +2,7 @@ import { Controller, Post, Get, Put, Delete, Body, Param, Query, Headers, HttpEx
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiHeader } from '@nestjs/swagger';
 import { TestingDatasetService } from '../services/testing-dataset.service';
 import { PricingAgentService } from '../services/pricing-agent.service';
-import { TestingDataset } from '../models/mongodb.model';
 import { CheckpointTestsetDto } from '../dtos/checkpoint-testset.dto';
-import { AssignmentResultDto } from '../dtos/assignment-result.dto';
-import { TestingDatasetWithTestsDto } from '../dtos/testing-dataset-with-tests.dto';
 import { AuthGuard } from '../auth/auth.guard';
 
 @ApiTags('testsets')
@@ -38,7 +35,7 @@ export class TestsetsController {
 
     try {
       // Validate agent exists
-      const agent = await this.pricingAgentService.findOne(agentId, tenantId);
+      const agent = await this.pricingAgentService.findOnePricingAgent(agentId, tenantId);
       if (!agent) {
         this.logger.warn(`Pricing agent not found: ${agentId} for tenant: ${tenantId}`);
         throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
@@ -106,7 +103,7 @@ export class TestsetsController {
         throw new HttpException('Checkpoint not found', HttpStatus.NOT_FOUND);
       }
 
-      await this.testingDatasetService.aiGenerateTestsetFromAssignedDatasets(checkpoint);
+      await this.testingDatasetService.aiGenerateTestsetFromAssignedDatasets(checkpoint, tenantId);
 
       this.logger.log(`Successfully generated testset for agent: ${agentId}, checkpoint: ${checkpoint._id}`);
       const testset = await this.testingDatasetService.getCheckpointTestset(checkpoint);
@@ -124,7 +121,7 @@ export class TestsetsController {
     }
   }
 
-  @Post('pricing-agents/:agentId/test')
+  @Post(':agentId/:checkpointId/runner')
   @ApiOperation({ summary: 'Runs checkpoint testset' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
   @ApiParam({ name: 'checkpointId', description: 'Checkpoint ID' })

@@ -12,8 +12,54 @@ export enum TagEnum {
 export enum LLMProvider {
   OPENAI = 'openai',
   ANTHROPIC = 'anthropic',
-  GOOGLE = 'google',
-  AZURE_OPENAI = 'azure-openai'
+  GOOGLE_GENAI = 'google-genai',
+  AZURE_OPENAI = 'azure_openai'
+}
+
+export enum SubscriptionPlan {
+  FREE = 'free',
+  STARTER = 'starter',
+  PROFESSIONAL = 'professional',
+  ENTERPRISE = 'enterprise'
+}
+
+export enum SubscriptionStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  CANCELLED = 'cancelled',
+  EXPIRED = 'expired',
+  TRIAL = 'trial'
+}
+
+export enum BillingCycle {
+  MONTHLY = 'monthly',
+  YEARLY = 'yearly'
+}
+
+export class Subscription {
+  @ApiProperty({ enum: SubscriptionPlan, enumName: 'SubscriptionPlan' })
+  plan: SubscriptionPlan;
+
+  @ApiProperty({ enum: SubscriptionStatus, enumName: 'SubscriptionStatus' })
+  status: SubscriptionStatus;
+
+  @ApiProperty({ type: Date })
+  startDate: Date;
+
+  @ApiProperty({ type: Date, required: false })
+  endDate?: Date;
+
+  @ApiProperty({ enum: BillingCycle, enumName: 'BillingCycle' })
+  billingCycle: BillingCycle;
+
+  @ApiProperty({ type: Number, required: false })
+  maxUsers?: number;
+
+  @ApiProperty({ type: Number, required: false })
+  maxApiKeys?: number;
+
+  @ApiProperty({ type: [String], required: false })
+  featuresEnabled?: string[];
 }
 
 export class LLMConfiguration {
@@ -49,8 +95,14 @@ export class Tenant {
   @ApiProperty({ type: Boolean, default: true })
   isActive: boolean;
 
+  @ApiProperty({ type: Subscription, required: false })
+  subscription?: Subscription;
+
   @ApiProperty({ type: LLMConfiguration, required: false })
   builderLlmConfiguration?: LLMConfiguration;
+
+  @ApiProperty({ type: LLMConfiguration, required: false })
+  chatbotLlmConfiguration?: LLMConfiguration;
 
   @ApiProperty({ type: Date })
   createdAt: Date;
@@ -119,8 +171,7 @@ export class PricingAgentCheckpoint {
   @ApiProperty({ type: String, format: 'uuid' })
   pricingAgentId: ObjectId; // Reference to the pricing agent
   tenantId?: string; // Made optional for single-tenant mode
-  version: number;
-
+  
   humanInputMessages: HumanInputMessage[];
   functionSchema?: string;
   functionCode?: string;
@@ -154,6 +205,7 @@ export class PricingAgent {
   name: string;
   createdAt: Date;
   deletedAt?: Date | null;
+  isDeployed: boolean;
 }
 
 export class TestingDataset {
@@ -241,8 +293,7 @@ export class CheckpointUnhappyPathTestRun {
 }
 
 export enum ExpectedErrorType {
-  NOT_ENOUGH_DATA_TO_QUOTE = 'NOT_ENOUGH_DATA_TO_QUOTE',
-  INCORRECT_ORDER_PARAMETER_VALUE = 'INCORRECT_ORDER_PARAMETER_VALUE',
+  INCORRECT_INPUT_VALUE = 'INCORRECT_INPUT_VALUE',
   QUOTATION_RULE_VIOLATION = 'QUOTATION_RULE_VIOLATION'
 }
 
@@ -267,4 +318,33 @@ export interface BacktraceCalculationStep {
   operation: string;
   description: string;
   subTasks?: BacktraceCalculationStep[];
+}
+
+export class ApiKey {
+  @ApiProperty({ name: '_id', type: String, format: 'uuid' })
+  _id?: ObjectId;
+
+  @ApiProperty({ type: String })
+  name: string;
+
+  @ApiProperty({ type: String })
+  key: string; // Hashed API key
+
+  @ApiProperty({ type: String, format: 'uuid' })
+  tenantId: ObjectId;
+
+  @ApiProperty({ type: Boolean, default: true })
+  isActive: boolean;
+
+  @ApiProperty({ type: Date })
+  createdAt: Date;
+
+  @ApiProperty({ type: Date, required: false })
+  lastUsedAt?: Date;
+
+  @ApiProperty({ type: Date, required: false })
+  expiresAt?: Date;
+
+  @ApiProperty({ type: Date, required: false })
+  deletedAt?: Date | null;
 }

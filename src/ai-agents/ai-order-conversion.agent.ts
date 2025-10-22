@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { z } from 'zod';
-import { LLMService, LLMServiceConfig } from './llm.service';
+import { LLMService, LangchainInitModelConfig } from './llm.service';
+import { initChatModel } from 'langchain/chat_models/universal';
 
 export interface OrderConversionRequest {
   conversationHistory: Array<{
@@ -25,11 +26,11 @@ const OrderConversionSchema = z.object({
 export class AiOrderConversionAgentService {
   private readonly logger = new Logger(AiOrderConversionAgentService.name);
 
-  constructor(private readonly llmService: LLMService) {
+  constructor() {
     this.logger.log('AiOrderConversionAgentService initialized');
   }
 
-  async convertOrder(request: OrderConversionRequest, llmConfig?: LLMServiceConfig): Promise<OrderConversionResponse> {
+  async convertOrder(request: OrderConversionRequest, llmConfig: LangchainInitModelConfig): Promise<OrderConversionResponse> {
     this.logger.log(`Converting conversation to structured format`);
 
     try {
@@ -40,7 +41,9 @@ export class AiOrderConversionAgentService {
       this.logger.debug(`Prompt generated: ${systemPrompt.length + userMessage.length} characters`);
 
       // Get the LLM instance
-      const llm = await this.llmService.getLLM(llmConfig);
+      const llm = await initChatModel(llmConfig.model, {
+        ...llmConfig.additionalConfig,
+      });
 
       // Generate the structured order as JSON
       const result = await llm.invoke([

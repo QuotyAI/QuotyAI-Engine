@@ -1,7 +1,6 @@
-import { Controller, Post, Body, UseGuards, Req, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, Get, HttpStatus, HttpException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { TenantService } from '../services/tenant.service';
-import { User } from '../models/mongodb.model';
 import { AuthGuard } from '../auth/auth.guard';
 import type { AuthenticatedRequest } from '../auth/auth.guard';
 import { CreateUserDto } from '../dtos/create-user.dto';
@@ -29,6 +28,9 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current authenticated user' })
   @ApiResponse({ status: 200, description: 'Current user details', type: UserDto })
   async getCurrentUser(@Req() request: AuthenticatedRequest): Promise<UserDto> {
+    if (!request.user?.id)
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+
     const firebaseId = request.user.id;
     const user = await this.tenantService.getUserByFirebaseId(firebaseId);
     if (!user) {

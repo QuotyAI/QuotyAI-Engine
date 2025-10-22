@@ -2,13 +2,30 @@ import { Injectable, Inject } from '@nestjs/common';
 import { Db } from 'mongodb';
 import { ObjectId } from 'mongodb';
 import { Tenant, User, UserTenant, LLMConfiguration } from '../models/mongodb.model';
+import { UpdateTenantDto } from '../dtos/update-tenant.dto';
+import { TenantDto } from '../dtos/tenant.dto';
+import { LLMConfigurationResponseDto } from '../dtos/llm-configuration-response.dto';
 
 @Injectable()
 export class TenantService {
   constructor(
     @Inject('DATABASE_CONNECTION')
     private db: Db
-  ) {}
+  ) { }
+
+  private transformLLMConfiguration(config: LLMConfiguration | undefined): LLMConfigurationResponseDto | undefined {
+    if (!config) return undefined;
+    const { apiKey, ...responseConfig } = config;
+    return responseConfig;
+  }
+
+  private transformTenantToDto(tenant: Tenant): TenantDto {
+    return {
+      ...tenant,
+      builderLlmConfiguration: this.transformLLMConfiguration(tenant.builderLlmConfiguration),
+      chatbotLlmConfiguration: this.transformLLMConfiguration(tenant.chatbotLlmConfiguration),
+    };
+  }
 
   // Tenant operations
   async createTenant(tenantData: Omit<Tenant, '_id' | 'createdAt' | 'updatedAt' | 'deletedAt'>): Promise<Tenant> {
@@ -23,7 +40,16 @@ export class TenantService {
     return tenant;
   }
 
-  async getTenantById(tenantId: string): Promise<Tenant | null> {
+  async getTenantById(tenantId: string): Promise<TenantDto | null> {
+    const result = await this.db.collection('tenants').findOne({
+      _id: new ObjectId(tenantId),
+      deletedAt: null
+    });
+    if (!result) return null;
+    return this.transformTenantToDto(result as Tenant);
+  }
+
+  async getTenantByIdInternal(tenantId: string): Promise<Tenant | null> {
     const result = await this.db.collection('tenants').findOne({
       _id: new ObjectId(tenantId),
       deletedAt: null
@@ -31,14 +57,15 @@ export class TenantService {
     return result as Tenant | null;
   }
 
-  async getAllTenants(): Promise<Tenant[]> {
+  async getAllTenants(): Promise<TenantDto[]> {
     const result = await this.db.collection('tenants').find({
       deletedAt: null
     }).toArray();
-    return result as Tenant[];
+    return (result as Tenant[]).map(tenant => this.transformTenantToDto(tenant));
   }
 
-  async updateTenant(tenantId: string, updateData: Partial<Omit<Tenant, '_id' | 'createdAt' | 'deletedAt'>>): Promise<Tenant | null> {
+  async updateTenant(tenantId: string, updateData: UpdateTenantDto): Promise<TenantDto | null> {
+    // Handle subscription update separately if present
     const result = await this.db.collection('tenants').findOneAndUpdate(
       { _id: new ObjectId(tenantId), deletedAt: null },
       {
@@ -49,7 +76,103 @@ export class TenantService {
       },
       { returnDocument: 'after' }
     );
-    return result?.value as Tenant | null;
+    if (!result?.value) return null;
+    return this.transformTenantToDto(result.value as Tenant);
+  }
+
+  async updateTenantBasicInfo(tenantId: string, basicInfo: { name?: string; description?: string }): Promise<TenantDto | null> {
+    const updateData: any = { updatedAt: new Date() };
+
+    if (basicInfo.name !== undefined) {
+      updateData.name = basicInfo.name;
+    }
+    if (basicInfo.description !== undefined) {
+      updateData.description = basicInfo.description;
+    }
+
+    const result = await this.db.collection('tenants').findOneAndUpdate(
+      { _id: new ObjectId(tenantId), deletedAt: null },
+      { $set: updateData },
+      { returnDocument: 'after' }
+    );
+    if (!result?.value) return null;
+    return this.transformTenantToDto(result.value as Tenant);
+  }
+
+
+
+  async updateTenantBuilderLlmConfig(tenantId: string, builderLlmConfiguration: LLMConfiguration): Promise<TenantDto | null> {
+    // Get existing tenant to preserve API key if new one is null/empty
+    const existingTenant = await this.getTenantByIdInternal(tenantId);
+    if (!existingTenant) return null;
+
+    // If new API key is null or empty, keep the existing one
+    const finalConfig = { ...builderLlmConfiguration };
+    if (!finalConfig.apiKey || finalConfig.apiKey.trim() === '') {
+      finalConfig.apiKey = existingTenant.builderLlmConfiguration?.apiKey || '';
+    }
+
+    const result = await this.db.collection('tenants').findOneAndUpdate(
+      { _id: new ObjectId(tenantId), deletedAt: null },
+      {
+        $set: {
+          builderLlmConfiguration: finalConfig,
+          updatedAt: new Date()
+        }
+      },
+      { returnDocument: 'after' }
+    );
+    if (!result?.value) return null;
+    return this.transformTenantToDto(result.value as Tenant);
+  }
+
+  async updateTenantChatbotLlmConfig(tenantId: string, chatbotLlmConfiguration: LLMConfiguration): Promise<TenantDto | null> {
+    // Get existing tenant to preserve API key if new one is null/empty
+    const existingTenant = await this.getTenantByIdInternal(tenantId);
+    if (!existingTenant) return null;
+
+    // If new API key is null or empty, keep the existing one
+    const finalConfig = { ...chatbotLlmConfiguration };
+    if (!finalConfig.apiKey || finalConfig.apiKey.trim() === '') {
+      finalConfig.apiKey = existingTenant.chatbotLlmConfiguration?.apiKey || '';
+    }
+
+    const result = await this.db.collection('tenants').findOneAndUpdate(
+      { _id: new ObjectId(tenantId), deletedAt: null },
+      {
+        $set: {
+          chatbotLlmConfiguration: finalConfig,
+          updatedAt: new Date()
+        }
+      },
+      { returnDocument: 'after' }
+    );
+    if (!result?.value) return null;
+    return this.transformTenantToDto(result.value as Tenant);
+  }
+
+  async updateTenantSubscription(tenantId: string, subscriptionData: any): Promise<TenantDto | null> {
+    // Convert date strings to Date objects
+    const subscriptionUpdate: any = { ...subscriptionData.subscription };
+    if (subscriptionData.subscription.startDate) {
+      subscriptionUpdate.startDate = new Date(subscriptionData.subscription.startDate);
+    }
+    if (subscriptionData.subscription.endDate) {
+      subscriptionUpdate.endDate = new Date(subscriptionData.subscription.endDate);
+    }
+
+    const result = await this.db.collection('tenants').findOneAndUpdate(
+      { _id: new ObjectId(tenantId), deletedAt: null },
+      {
+        $set: {
+          subscription: subscriptionUpdate,
+          updatedAt: new Date()
+        }
+      },
+      { returnDocument: 'after' }
+    );
+    if (!result?.value) return null;
+    return this.transformTenantToDto(result.value as Tenant);
   }
 
   async deleteTenant(tenantId: string): Promise<boolean> {
@@ -176,7 +299,7 @@ export class TenantService {
     return result as User[];
   }
 
-  async getUserTenants(userId: string): Promise<Tenant[]> {
+  async getUserTenants(userId: string): Promise<TenantDto[]> {
     const userTenants = await this.db.collection('userTenants').find({
       userId: new ObjectId(userId),
       removedAt: null
@@ -187,7 +310,7 @@ export class TenantService {
       _id: { $in: tenantIds },
       deletedAt: null
     }).toArray();
-    return result as Tenant[];
+    return (result as Tenant[]).map(tenant => this.transformTenantToDto(tenant));
   }
 
   async getUserTenantRole(userId: string, tenantId: string): Promise<UserTenant | null> {

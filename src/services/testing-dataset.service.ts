@@ -15,6 +15,7 @@ import { AiUnhappyPathDatasetGenerationAgentService } from 'src/ai-agents/ai-unh
 import { AiTestsetGenerationAgentService } from '../ai-agents/ai-testset-generator.agent';
 import { DynamicRunnerService } from './dynamic-runner.service';
 import { TestingDatasetWithTestsDto } from 'src/dtos/testing-dataset-with-tests.dto';
+import { LLMService } from 'src/ai-agents/llm.service';
 
 type TestingDatasetFilter = Filter<TestingDataset>;
 type TestingDatasetAssignmentFilter = Filter<TestingDatasetAssignment>;
@@ -40,6 +41,7 @@ export class TestingDatasetService {
     private readonly aiUnhappyPathDatasetGenerationAgent: AiUnhappyPathDatasetGenerationAgentService,
     private readonly aiTestsetGenerationAgent: AiTestsetGenerationAgentService,
     private readonly dynamicRunnerService: DynamicRunnerService,
+    private readonly llmService: LLMService,
   ) {
     this.logger.log('TestingDatasetService initialized');
   }
@@ -123,7 +125,7 @@ export class TestingDatasetService {
       .join('\n');
   }
 
-  async aiGenerateDataset(checkpoint: PricingAgentCheckpoint, agentName: string): Promise<TestingDataset> {
+  async aiGenerateDataset(checkpoint: PricingAgentCheckpoint, agentName: string, tenantId?: string): Promise<TestingDataset> {
     this.logger.log(`AI generating checkpoint dataset for checkpoint: ${checkpoint._id}`);
 
     if (!checkpoint.functionSchema || !checkpoint.functionCode) {
@@ -136,11 +138,15 @@ export class TestingDatasetService {
       throw new Error('No input messages found to generate tests');
     }
 
+    // Get tenant LLM config (will throw error for free tier tenants without BYOK)
+    const llmConfig = await this.llmService.getTenantLLMConfig(tenantId);
+
     // Generate happy path test scenarios
     const happyPathTests = await this.aiHappyPathDatasetGenerationAgent.generateHappyPathScenarios(
       pricingDescription,
       checkpoint.functionSchema,
       checkpoint.functionCode,
+      llmConfig
     ) || [];
 
     // Generate unhappy path test scenarios
@@ -148,11 +154,12 @@ export class TestingDatasetService {
       pricingDescription,
       checkpoint.functionSchema,
       checkpoint.functionCode,
+      llmConfig
     ) || [];
 
     const testingDataset: Omit<TestingDataset, '_id' | 'createdAt'> = {
-      name: `Generated Tests for ${agentName} Checkpoint ${checkpoint.version}`,
-      description: `Auto-generated test scenarios for pricing agent checkpoint v${checkpoint.version}`,
+      name: `Generated Tests for ${agentName} Checkpoint ${checkpoint._id}`,
+      description: `Auto-generated test scenarios for pricing agent checkpoint v${checkpoint._id}`,
       tenantId: checkpoint.tenantId,
     };
 
@@ -373,7 +380,7 @@ export class TestingDatasetService {
     }
   }
 
-  async aiGenerateTestsetFromAssignedDatasets(checkpoint: PricingAgentCheckpoint) {
+  async aiGenerateTestsetFromAssignedDatasets(checkpoint: PricingAgentCheckpoint, tenantId?: string) {
     this.logger.log(`AI generating testset from assigned datasets for checkpoint: ${checkpoint._id}`);
 
     try {
@@ -383,7 +390,7 @@ export class TestingDatasetService {
 
       // Get all assigned testing datasets from the separate collection
       const assignments = await this.testingDatasetAssignmentCollection.find(
-        this.buildTestingDatasetAssignmentFilter(checkpoint.tenantId, {
+        this.buildTestingDatasetAssignmentFilter(tenantId, {
           pricingAgentId: checkpoint.pricingAgentId
         })
       ).toArray();
@@ -411,12 +418,14 @@ export class TestingDatasetService {
         this.buildDatasetUnhappyPathTestFilter(checkpoint.tenantId, { testingDatasetId: { $in: assignedDatasetIds } })
       ).toArray();
 
+      const llmConfig = await this.llmService.getTenantLLMConfig(tenantId);
+
       // Generate structured test cases using AI
       const generatedInputs = await this.aiTestsetGenerationAgent.generateTypedOrderInputs({
         happyPathTests: datasetHappyPathTests,
         unhappyPathTests: datasetUnhappyPathTests,
-        checkpoint: checkpoint
-      });
+        checkpoint: checkpoint,
+      }, llmConfig);
 
       // Remove existing tests for this checkpoint before saving new ones
       await this.checkpointHappyPathTestCollection.deleteMany(
@@ -549,6 +558,31 @@ export class TestingDatasetService {
       tenantId: tenantId,
       assignedAt: new Date(),
     });
+  }
+
+  async unassignTestingDataset(agentId: string, datasetId: string, tenantId?: string): Promise<boolean> {
+    this.logger.log(`Unassigning testing dataset: ${datasetId} from agent: ${agentId} for tenant: ${tenantId}`);
+
+    try {
+      const filter = this.buildTestingDatasetAssignmentFilter(tenantId, {
+        pricingAgentId: new ObjectId(agentId),
+        testingDatasetId: new ObjectId(datasetId),
+      });
+
+      const result = await this.testingDatasetAssignmentCollection.deleteOne(filter);
+      const deleted = result.deletedCount > 0;
+
+      if (deleted) {
+        this.logger.log(`Successfully unassigned testing dataset: ${datasetId} from agent: ${agentId}`);
+      } else {
+        this.logger.warn(`Testing dataset assignment not found: dataset ${datasetId} for agent ${agentId}`);
+      }
+
+      return deleted;
+    } catch (error) {
+      this.logger.error(`Failed to unassign testing dataset ${datasetId} from agent ${agentId}: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   async findTestingDatasetAssignments(agentId: string, datasetId: string, tenantId?: string): Promise<TestingDatasetAssignment[]> {

@@ -1,9 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { initChatModel } from 'langchain/chat_models/universal';
-import { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { LLMConfiguration, LLMProvider } from '../models/mongodb.model';
+import { LLMConfiguration, LLMProvider, SubscriptionPlan } from '../models/mongodb.model';
+import { TenantService } from '../services/tenant.service';
 
-export interface LLMServiceConfig {
+export interface LangchainInitModelConfig {
   provider: LLMProvider;
   model: string;
   apiKey: string;
@@ -15,49 +14,20 @@ export interface LLMServiceConfig {
 export class LLMService {
   private readonly logger = new Logger(LLMService.name);
 
-  /**
-   * Creates a configured LLM instance based on the provider configuration
-   */
-  async createLLM(config: LLMServiceConfig): Promise<BaseChatModel> {
-    this.logger.debug(`Creating LLM instance for provider: ${config.provider}, model: ${config.model}`);
+  constructor(private readonly tenantService: TenantService) {}
 
-    switch (config.provider) {
-      case LLMProvider.GOOGLE:
-        return await initChatModel(config.model, {
-          modelProvider: 'google_vertexai',
-          ...config.additionalConfig,
-        });
-
-      case LLMProvider.OPENAI:
-      case LLMProvider.ANTHROPIC:
-      case LLMProvider.AZURE_OPENAI:
-        // TODO: Install and implement support for these providers
-        throw new Error(`Provider ${config.provider} is not yet supported. Only Google Vertex AI is currently available.`);
-
-      default:
-        throw new Error(`Unsupported LLM provider: ${config.provider}`);
-    }
-  }
 
   /**
    * Creates a default LLM configuration (Google Vertex AI with Gemini)
    */
-  getDefaultLLMConfig(): LLMServiceConfig {
+  getDefaultLLMConfig(): LangchainInitModelConfig {
     return {
-      provider: LLMProvider.GOOGLE,
+      provider: LLMProvider.GOOGLE_GENAI,
       model: 'gemini-2.5-flash',
       apiKey: '', // Will be handled by environment variables in the actual implementation
+      baseUrl: undefined,
+      additionalConfig: {},
     };
-  }
-
-  /**
-   * Gets an LLM instance from configuration, with fallback to default
-   */
-  async getLLM(llmConfig?: LLMServiceConfig): Promise<BaseChatModel> {
-    if (llmConfig) {
-      return await this.createLLM(llmConfig);
-    }
-    return await this.createLLM(this.getDefaultLLMConfig());
   }
 
   /**
@@ -91,17 +61,41 @@ export class LLMService {
   }
 
   /**
-   * Extracts Azure instance name from base URL
-   * e.g., https://my-instance.openai.azure.com/ -> my-instance
+   * Gets tenant-specific LLM configuration with validation and fallback logic
    */
-  private extractInstanceName(baseUrl: string): string {
-    try {
-      const url = new URL(baseUrl);
-      const hostname = url.hostname;
-      const parts = hostname.split('.');
-      return parts[0];
-    } catch (error) {
-      throw new Error(`Invalid Azure OpenAI base URL: ${baseUrl}`);
+  async getTenantLLMConfig(tenantId?: string): Promise<LangchainInitModelConfig> {
+    if (!tenantId) {
+      return this.getDefaultLLMConfig(); // Use default configuration
     }
-  }
+
+    try {
+      const tenant = await this.tenantService.getTenantByIdInternal(tenantId);
+      if (tenant?.builderLlmConfiguration) {
+        const validation = this.validateLLMConfig(tenant.builderLlmConfiguration);
+        if (validation.isValid) {
+          return {
+            provider: tenant.builderLlmConfiguration.provider,
+            model: tenant.builderLlmConfiguration.model,
+            apiKey: tenant.builderLlmConfiguration.apiKey,
+            baseUrl: tenant.builderLlmConfiguration.baseUrl,
+            additionalConfig: {
+              modelProvider: tenant.builderLlmConfiguration.provider,
+              apiKey: tenant.builderLlmConfiguration.apiKey,
+              ...tenant.builderLlmConfiguration.additionalConfig,
+            }
+          };
+        } else {
+          this.logger.warn(`Invalid LLM configuration for tenant ${tenantId}: ${validation.errors.join(', ')}`);
+          throw new Error(`Invalid LLM configuration for tenant ${tenantId}`);
+        }
+      } else if (!tenant?.subscription || !tenant.subscription.plan || tenant.subscription.plan === SubscriptionPlan.FREE) {
+        throw new Error(`Tenant ${tenantId} does not have a valid subscription plan`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to get LLM configuration for tenant ${tenantId}: ${error.message}`);
+      throw error;
+    }
+
+    throw new Error(`Failed to get LLM configuration for tenant ${tenantId}: Unknown reason`);
+  }  
 }
