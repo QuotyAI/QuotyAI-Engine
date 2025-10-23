@@ -2,180 +2,127 @@
 
 > **⚠️ Early Development Notice**: This is version 0.1.0 of the QuotyAI Engine. As an early-stage project, expect frequent breaking changes, new features, and API modifications. We're actively developing and refining the platform - your feedback is invaluable!
 
-Welcome to the QuotyAI engine! This is the heart of our reliable AI chatbot quoting system. We're building a community-driven platform that eliminates the chaos of inconsistent LLM pricing and brings deterministic, programmable quotes to businesses worldwide.
+The QuotyAI Engine is a powerful backend API that transforms natural language business rules into deterministic, programmable pricing functions. Built for developers and businesses who need reliable AI-powered quoting systems.
 
-## What We Solve
+## Problems Solved
 
-Stop losing customers to your chatbot's random pricing and inaccurate calculations. QuotyAI transforms flaky AI responses into rock-solid, programmable quotes that reflect your actual business rules.
+### 🚫 **Inconsistent AI Pricing**
+Stop losing customers to chatbots that give different quotes for the same service. Our engine generates **deterministic pricing functions** that always return the same result for identical inputs.
 
-### The Problem with Standard LLMs
-- **Non-deterministic pricing** that erodes customer trust
-- **Exploitability** where chatbots give unauthorized discounts
-- **Complex prompting** that requires constant tuning
-- **High costs and slow responses** that kill conversions
-- **Black box problems** with no observability or debugging
+### 💸 **Exploitable Pricing Logic**
+Manual pricing rules are vulnerable to manipulation. We create **type-safe, validated functions** that enforce your business constraints and prevent unauthorized discounts.
 
-### Our Solution
-QuotyAI uses AI where it excels (understanding complex pricing models) and deterministic code where you need reliability. We generate accurate, programmable pricing logic that executes consistently without hallucinations.
+### 🧪 **Inadequate Testing**
+Traditional testing misses edge cases. Our platform provides **AI-generated comprehensive test suites** covering both happy paths and error conditions.
 
-## Community & Contributing
+### 🔒 **Security & Compliance**
+Shared AI infrastructure poses risks. We offer **enterprise-grade isolation** with multi-tenant architecture and secure API key management.
 
-We believe in building together! QuotyAI is an open-source project that welcomes contributors from all backgrounds. Whether you're a developer, business owner, or AI enthusiast, there's a place for you in our community.
+### 📈 **Scalability Challenges**
+Manual systems don't scale. Our engine supports **automated deployment** and **integration APIs** for seamless scaling across multiple chatbots and platforms.
 
-### Ways to Get Involved
-- **🐛 Report Issues**: Found a bug? Let us know on GitHub
-- **💡 Suggest Features**: Have ideas for improving quoting systems? Share them!
-- **🔧 Contribute Code**: Help build the future of reliable AI quoting
-- **📖 Improve Documentation**: Make our docs clearer and more accessible
-- **🧪 Test & Validate**: Help ensure our pricing logic works perfectly
+## Technical Highlights
 
-### Getting Started for Contributors
-Ready to jump in? Here's how to get the backend running locally:
+### 🧠 **AI Agent Architecture**
+- **Specialized AI agents** for schema generation, formula creation, and testing
+- **Multi-turn conversation processing** with context-aware order conversion
+- **Structured output validation** ensuring AI responses meet technical requirements
+- **Vision-capable agents** for processing pricing table images
+- **Iterative refinement loops** with feedback-based code improvement
 
-## Quick Start
+### 🏗️ **System Design**
+- **NestJS framework** with modular architecture and dependency injection
+- **MongoDB native driver** for optimized database operations
+- **TypeScript compilation pipeline** with runtime code generation
+- **Sandbox execution environment** using Node.js VM module
+- **Immutable checkpoint system** for version control and audit trails
 
-### For Contributors
-```bash
-# Clone the repo
-cd quotyai/backend
+### 🔧 **Development Tooling**
+- **Nx monorepo** for efficient multi-package development
+- **Swagger/OpenAPI** for interactive API documentation
+- **Jest testing framework** with comprehensive test coverage
+- **ESLint + Prettier** for code quality and consistency
+- **Hot reload development** with efficient iteration cycles
 
-# Install dependencies
-npm install
+### 📊 **Data Architecture**
+- **Multi-tenant data isolation** with tenant-specific collections
+- **Audit logging system** with hierarchical operation tracking
+- **Versioned checkpoints** with complete state snapshots
+- **Optimized query patterns** for performance and scalability
+- **Schema validation** with comprehensive input sanitization
 
-# Set up environment
-cp .env.example .env
-# Add your LLM API keys and database config
 
-# Start development server
-npm run start:dev
-```
+## Key Capabilities
 
-### For Businesses
-Visit [quotyai.com](https://quotyai.com) to see how QuotyAI can transform your chatbot's quoting accuracy.
+- **🤖 AI-Powered Code Generation**: Transform natural language pricing rules into executable TypeScript functions
+- **🔄 Dynamic Execution**: Safe sandboxed environment for running generated pricing logic
+- **🧪 Comprehensive Testing**: AI-generated test scenarios with automated validation
+- **🏢 Multi-Tenant Architecture**: Secure data isolation between businesses
+- **🔑 API Key Management**: Secure authentication for external integrations
+- **📊 Audit Trails**: Detailed backtraces of all pricing calculations
+- **🔗 Integration APIs**: RESTful endpoints for chatbot platforms
+- **🎭 Playground Testing**: Interactive environment for testing conversations
+- **📸 Image Processing**: Extract pricing tables from uploaded images
+- **🏷️ Version Control**: Immutable checkpoints with rollback capabilities
 
-## API Overview
+## Future Integrations
 
-The QuotyAI engine provides RESTful endpoints for:
-- **Pricing Agent Management**: Create and manage AI-powered pricing agents
-- **Input Processing**: Handle natural language pricing descriptions
-- **Code Generation**: Transform rules into deterministic TypeScript functions
-- **Testing & Validation**: Ensure pricing logic accuracy
-- **Multi-Tenant Support**: Secure data isolation between businesses
+### 🤖 **Chatbot Platform APIs**
+- **Dialogflow CX**: RESTful integration with Google Dialogflow CX webhooks
+- **Microsoft Bot Framework**: Direct API integration with Azure Bot Services
+- **Amazon Lex V2**: Native support for AWS Lex conversational interfaces
+- **Rasa Action Server**: Integration with Rasa's custom action endpoints
+- **Custom Webhook Support**: RESTful webhook support for any chatbot platform
 
-### Key Endpoints
-- `POST /builder/pricing-agents` - Create pricing agent
-- `POST /builder/pricing-agents/:id/messages` - Add pricing rules
-- `POST /builder/pricing-agents/:id/build` - Generate pricing function
-- `POST /playground/execute` - Test pricing calculations
+### 🌐 **Omnichannel Platforms**
+- **Chatwoot**: Native integration for unified customer communication
+- **Intercom**: Direct integration with Intercom's messaging platform
+- **Zendesk**: Integration with Zendesk customer service platform
+- **Freshchat**: Seamless integration with Freshworks conversational support
+- **CRM Webhooks**: Integration with any CRM system via webhooks
 
-## AI Agent Pipeline
+### ⚡ **Automation Platforms**
+- **Zapier**: Pre-built Zapier integrations for workflow automation
+- **n8n**: Native n8n nodes for complex workflow orchestration
+- **Make (Integromat)**: Integration with Make's visual workflow builder
+- **Microsoft Power Automate**: Integration with enterprise automation workflows
+- **Custom API Endpoints**: RESTful API support for any automation platform
 
-### Schema Generation Agent
-- Analyzes natural language pricing descriptions
-- Generates TypeScript interfaces for input parameters
-- Ensures type safety and validation
+### 🔗 **Developer Ecosystem**
+- **SDK Libraries**: Client libraries for Python, JavaScript, and other languages
+- **API Marketplace**: Publish pricing agents to integration marketplaces
+- **Webhook Events**: Real-time event streaming for external system integration
+- **OAuth 2.0**: Secure third-party application integrations
+- **Docker Integration**: Containerized deployments for cloud platforms
 
-### Formula Generation Agent
-- Converts pricing rules to executable TypeScript functions
-- Implements complex logic with conditionals, loops, and arithmetic
-- Produces deterministic, testable code
-
-### Testing Dataset Generation Agent
-- Creates comprehensive test scenarios
-- Generates happy path and edge case tests
-- Validates function correctness against business rules
+## Getting Started
 
 ### Prerequisites
 - Node.js v18+
 - MongoDB (local or cloud)
-- TypeScript
-- Access to LLM API (OpenAI, Anthropic, etc.)
+- Access to LLM API (OpenAI, Anthropic, Google Vertex AI, Azure OpenAI)
 
-### Installation
+### Installation & Setup
 ```bash
 cd backend
 npm install
-```
-
-### Configuration
-```bash
-# Copy environment template
 cp .env.example .env
-
-# Configure required settings:
-# - Database connection (MONGODB_URI)
-# - LLM API keys (OPENAI_API_KEY, etc.)
-# - Multi-tenancy settings (ENABLE_MULTI_TENANCY)
-# - Firebase service account path (FIREBASE_SERVICE_ACCOUNT_PATH)
-```
-
-### Running the Application
-```bash
-# Development mode
+# Configure: MONGODB_URI, LLM API keys, ENABLE_MULTI_TENANCY, FIREBASE_SERVICE_ACCOUNT_PATH
 npm run start:dev
-
-# Production build
-npm run build
-npm run start:prod
-
-# Generate OpenAPI documentation
-npm run build
-node generate-openapi.js
 ```
 
-### Testing
-```bash
-# Unit tests
-npm run test
+### API Documentation
+Once running, visit `/api` for interactive Swagger documentation.
 
-# E2E tests
-npm run test:e2e
+## Community & Contributing
 
-# Test coverage
-npm run test:cov
-```
+We welcome contributors! Help us build the future of reliable AI quoting:
 
-## Authentication System
-
-The QuotyAI Engine features a flexible, provider-agnostic authentication system designed to support multiple authentication providers out of the box. This architecture allows businesses to integrate with their preferred identity management solutions without vendor lock-in.
-
-### Supported Providers
-- **Firebase Authentication**: Primary provider with full integration
-- **Supabase**: Planned support for Supabase Auth
-- **Auth0**: Planned support for Auth0 authentication
-- **Custom Providers**: Extensible architecture for additional providers
-
-### Key Features
-- **Provider Abstraction**: Clean interface for adding new auth providers
-- **Token Verification**: Secure JWT token validation across all providers
-- **User Management**: Unified user operations regardless of provider
-- **Multi-Tenant Support**: Authentication integrated with tenant isolation
-- **Role-Based Access**: Flexible permission system with admin/super-admin roles
-- **Multiple Auth Methods**: Frontend supports Google OAuth, GitHub OAuth, and email/password authentication
-
-### Architecture
-The auth system uses a provider pattern with:
-- `AuthProvider` interface for consistent provider implementations
-- `AuthService` for unified auth operations across providers
-- `AuthGuard` for route protection with automatic token verification
-- Provider-specific implementations (currently Firebase, extensible for others)
-
-## Key Technologies
-
-- **NestJS**: Progressive Node.js framework for building efficient APIs
-- **MongoDB**: NoSQL database with native Node.js driver
-- **LangChain**: LLM framework for AI agent orchestration
-- **TypeScript**: Type-safe development with full IntelliSense support
-- **Firebase Admin SDK**: Authentication and user management
-- **Swagger/OpenAPI**: API documentation and testing
-
-## Security & Compliance
-
-- **Multi-Tenant Isolation**: Complete data segregation between tenants
-- **Audit Trails**: Comprehensive logging of all operations
-- **Input Validation**: Strict validation of all API inputs
-- **Rate Limiting**: Protection against abuse
-- **CORS Configuration**: Secure cross-origin resource sharing
+- **🐛 Report Issues**: Found a bug? Let us know on GitHub
+- **💡 Suggest Features**: Ideas for improving quoting systems? Share them!
+- **🔧 Contribute Code**: Help build reliable AI pricing logic
+- **🧪 Test & Validate**: Ensure our pricing functions work perfectly
+- **📖 Improve Documentation**: Make our docs clearer and more accessible
 
 ## License
 
@@ -186,7 +133,6 @@ The QuotyAI Engine is licensed under the **Business Source License (BSL) 1.0**, 
 - **Source Access**: Anyone can view, modify, and distribute the source code
 - **Commercial Use**: Businesses can use and modify the engine for their own applications
 - **Production Use**: Commercial production use requires a commercial license
-- **Future Open Source**: The license automatically converts to GPL v2+ after 4 years
 
 ### BSL vs Other Licenses
 The BSL provides a balanced approach between open source accessibility and commercial viability. It allows developers to use and contribute to the codebase while ensuring that commercial exploitation supports continued development and maintenance.
