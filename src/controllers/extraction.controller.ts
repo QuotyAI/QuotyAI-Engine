@@ -1,9 +1,9 @@
 import { Controller, Headers, Post, Body, HttpException, HttpStatus, Logger, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
-import { AiPricingTableExtractionAgentService } from '../ai-agents/ai-pricing-table-extraction.agent';
+import { AiOcrPricingTablesAgentService } from '../ai-agents/ai-ocr-pricing-tables.agent';
 import { ExtractedPricingTable, PricingTableExtractionRequest } from 'src/dtos/text-extraction.dto';
 import { AuthGuard } from '../auth/auth.guard';
-import { LLMService } from 'src/ai-agents/llm.service';
+import { LangchainCongigService } from 'src/ai-agents/langchain-config.service';
 
 @ApiTags('extraction')
 @Controller('extraction')
@@ -12,8 +12,8 @@ export class ExtractionController {
   private readonly logger = new Logger(ExtractionController.name);
 
   constructor(
-    private readonly pricingTableExtractionAgent: AiPricingTableExtractionAgentService,
-    private readonly llmService: LLMService,
+    private readonly pricingTableExtractionAgent: AiOcrPricingTablesAgentService,
+    private readonly llmService: LangchainCongigService,
   ) {
     this.logger.log('PricingTableExtractionController initialized');
   }

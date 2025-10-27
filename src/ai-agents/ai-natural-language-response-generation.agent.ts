@@ -2,10 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 import { QuoteResult } from '../models/mongodb.model';
-import { LLMService, LangchainInitModelConfig } from './llm.service';
+import { LangchainCongigService, LangchainInitModelConfig } from './langchain-config.service';
 import { initChatModel } from 'langchain/chat_models/universal';
 
-export interface PlaygroundMessageGenerationRequest {
+export interface NaturalLanguageResponseGenerationRequest {
   conversation: Array<{
     message: string;
     role: 'AI' | 'User';
@@ -14,7 +14,7 @@ export interface PlaygroundMessageGenerationRequest {
   pricingAgentContext: string;
 }
 
-export interface PlaygroundMessageGenerationResponse {
+export interface NaturalLanguageResponseGenerationResponse {
   aiMessage: string;
 }
 
@@ -23,14 +23,14 @@ const PlaygroundMessageSchema = z.object({
 }).describe('Schema for generating AI response messages in playground conversations');
 
 @Injectable()
-export class AiPlaygroundMessageAgentService {
-  private readonly logger = new Logger(AiPlaygroundMessageAgentService.name);
+export class NaturalLanguageResponseGenerationAgentService {
+  private readonly logger = new Logger(NaturalLanguageResponseGenerationAgentService.name);
 
-  constructor(private readonly llmService: LLMService) {
+  constructor(private readonly llmService: LangchainCongigService) {
     this.logger.log('AiPlaygroundMessageAgentService initialized');
   }
 
-  async generatePlaygroundMessage(request: PlaygroundMessageGenerationRequest, llmConfig: LangchainInitModelConfig): Promise<PlaygroundMessageGenerationResponse> {
+  async generatePlaygroundMessage(request: NaturalLanguageResponseGenerationRequest, llmConfig: LangchainInitModelConfig): Promise<NaturalLanguageResponseGenerationResponse> {
     this.logger.log(`Generating AI playground message`);
 
     try {

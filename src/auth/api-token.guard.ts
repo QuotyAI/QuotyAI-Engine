@@ -13,10 +13,13 @@ export class ApiTokenGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const token = this.extractTokenFromHeader(request);
+    const token = this.extractTokenFromQuery(request);
 
     if (!token) {
+      console.warn('access integration endpoint without apiKey')
       throw new UnauthorizedException('No API token provided');
+    } else {
+      console.debug(`apiKey=${token}`)
     }
 
     try {
@@ -28,8 +31,7 @@ export class ApiTokenGuard implements CanActivate {
     }
   }
 
-  private extractTokenFromHeader(request: Request): string | undefined {
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
+  private extractTokenFromQuery(request: Request): string | undefined {
+    return request.query['apiKey'] as string | undefined;
   }
 }

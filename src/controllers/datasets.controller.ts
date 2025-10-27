@@ -20,7 +20,7 @@ export class DatasetsController {
 
   @Get('')
   @ApiOperation({ summary: 'Search testing datasets with flexible criteria' })
-  @ApiQuery({ name: 'checkpointId', description: 'Filter by checkpoint ID (optional)', required: false })
+  @ApiQuery({ name: 'agentId', description: 'Filter by agentId (optional)', required: false })
   @ApiQuery({ name: 'name', description: 'Search by dataset name (case-insensitive)', required: false })
   @ApiQuery({ name: 'description', description: 'Search by dataset description (case-insensitive)', required: false })
   @ApiQuery({ name: 'limit', description: 'Maximum number of results to return', required: false })
@@ -30,19 +30,19 @@ export class DatasetsController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async findTestingDatasets(
     @Headers('X-Tenant-ID') tenantId?: string,
-    @Query('checkpointId') checkpointId?: string,
+    @Query('agentId') agentId?: string,
     @Query('name') name?: string,
     @Query('description') description?: string,
     @Query('limit') limit?: string
   ): Promise<TestingDataset[]> {
-    this.logger.log(`Finding testing datasets with criteria - checkpointId: ${checkpointId}, tenantId: ${tenantId}, name: ${name}, description: ${description}, limit: ${limit}`);
+    this.logger.log(`Finding testing datasets with criteria - agentId: ${agentId}, tenantId: ${tenantId}, name: ${name}, description: ${description}, limit: ${limit}`);
 
     try {
 
       const searchCriteria: any = {};
 
-      if (checkpointId) {
-        searchCriteria.checkpointId = checkpointId;
+      if (agentId) {
+        searchCriteria.agentId = agentId;
       }
 
       searchCriteria.tenantId = tenantId;

@@ -9,10 +9,14 @@ export class ApiTokenAuthProvider implements AuthProvider {
   constructor(private readonly apiKeyService: ApiKeyService) {}
 
   async verifyToken(token: string): Promise<AuthUser> {
+    console.debug(`verifyToken start`)
     const apiKey = await this.apiKeyService.validateApiKey(token);
 
     if (!apiKey) {
+      console.debug(`verifyToken Invalid API token`)
       throw new Error('Invalid API token');
+    } else {
+      console.debug(`verifyToken apiKey=${apiKey}`)
     }
 
     return {

@@ -1,16 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { ExtractedPricingTable, PricingTableExtractionRequest } from 'src/dtos/text-extraction.dto';
-import { LLMService, LangchainInitModelConfig } from './llm.service';
+import { LangchainCongigService, LangchainInitModelConfig } from './langchain-config.service';
 import { initChatModel } from 'langchain/chat_models/universal';
 
 
 @Injectable()
-export class AiPricingTableExtractionAgentService {
-  private readonly logger = new Logger(AiPricingTableExtractionAgentService.name);
+export class AiOcrPricingTablesAgentService {
+  private readonly logger = new Logger(AiOcrPricingTablesAgentService.name);
 
-  constructor(private readonly llmService: LLMService) {
+  constructor(private readonly llmService: LangchainCongigService) {
     this.logger.log('AiPricingTableExtractionAgentService initialized');
   }
 

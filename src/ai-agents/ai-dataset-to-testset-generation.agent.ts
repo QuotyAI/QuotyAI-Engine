@@ -3,15 +3,15 @@ import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { initChatModel } from 'langchain/chat_models/universal';
 import { z } from 'zod';
 import { CheckpointHappyPathTestRun, CheckpointUnhappyPathTestRun, PricingAgentCheckpoint, DatasetHappyPathTestData, DatasetUnhappyPathTestData } from '../models/mongodb.model';
-import { LangchainInitModelConfig } from './llm.service';
+import { LangchainInitModelConfig } from './langchain-config.service';
 
-export interface TypedOrderInputGenerationRequest {
+export interface AiDatasetToTestsetGenerationRequest {
   happyPathTests: DatasetHappyPathTestData[];
   unhappyPathTests: DatasetUnhappyPathTestData[];
   checkpoint: PricingAgentCheckpoint;
 }
 
-export interface GeneratedTypedOrderInputs {
+export interface AiDatasetToTestsetGenerationResponse {
   happyPathTestRuns: CheckpointHappyPathTestRun[]; // Generated happy path test runs
   unhappyPathTestRuns: CheckpointUnhappyPathTestRun[]; // Generated unhappy path test runs
 }
@@ -24,14 +24,14 @@ const TypedOrderInputSchema = z.object({
 }).describe('Schema for generating structured order inputs from natural language descriptions. Each input must have a corresponding structured output.');
 
 @Injectable()
-export class AiTestsetGenerationAgentService {
-  private readonly logger = new Logger(AiTestsetGenerationAgentService.name);
+export class AiDatasetToTestsetGenerationAgentService {
+  private readonly logger = new Logger(AiDatasetToTestsetGenerationAgentService.name);
 
   constructor() {
     this.logger.log('AiTestsetGenerationAgentService initialized');
   }
 
-  async generateTypedOrderInputs(request: TypedOrderInputGenerationRequest, llmConfig: LangchainInitModelConfig): Promise<GeneratedTypedOrderInputs> {
+  async datasetToTestset(request: AiDatasetToTestsetGenerationRequest, llmConfig: LangchainInitModelConfig): Promise<AiDatasetToTestsetGenerationResponse> {
     this.logger.log(`Generating typed order inputs from test data`);
 
     try {

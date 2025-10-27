@@ -720,6 +720,72 @@
         ]
       }
     },
+    "/pricing-agents/{agentId}/datasets/build": {
+      "post": {
+        "operationId": "PricingAgentsController_aiGenerateDataset",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Tenant-ID",
+            "required": false,
+            "in": "header",
+            "description": "Tenant ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkpointId",
+            "required": false,
+            "in": "query",
+            "description": "Checkpoint ID (optional, uses latest if not provided)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dataset generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestingDatasetWithTestsDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestingDatasetWithTestsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "AI generate testing dataset",
+        "tags": [
+          "pricing-agents"
+        ]
+      }
+    },
     "/pricing-agents/{agentId}/datasets/{datasetId}": {
       "post": {
         "operationId": "PricingAgentsController_assignTestingDataset",
@@ -848,9 +914,9 @@
         ]
       }
     },
-    "/pricing-agents/{agentId}/datasets/build": {
-      "post": {
-        "operationId": "PricingAgentsController_aiGenerateDataset",
+    "/pricing-agents/{agentId}/schema-examples": {
+      "get": {
+        "operationId": "PricingAgentsController_getExampleRequestBodies",
         "parameters": [
           {
             "name": "agentId",
@@ -869,34 +935,15 @@
             "schema": {
               "type": "string"
             }
-          },
-          {
-            "name": "checkpointId",
-            "required": false,
-            "in": "query",
-            "description": "Checkpoint ID (optional, uses latest if not provided)",
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Dataset generated successfully",
+            "description": "Example request bodies generated successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TestingDatasetWithTestsDto"
-                }
-              }
-            }
-          },
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TestingDatasetWithTestsDto"
+                  "$ref": "#/components/schemas/ExampleRequestBodiesDto"
                 }
               }
             }
@@ -908,13 +955,13 @@
             "description": "Internal server error"
           }
         },
-        "summary": "AI generate testing dataset",
+        "summary": "Get example request bodies for agent endpoints",
         "tags": [
           "pricing-agents"
         ]
       }
     },
-    "/playground/pricing-agents/{agentId}/playground": {
+    "/playground/{agentId}/playground": {
       "post": {
         "operationId": "PlaygroundController_executePlayground",
         "parameters": [
@@ -993,7 +1040,7 @@
         ]
       }
     },
-    "/playground/pricing-agents/{agentId}/demo-conversation": {
+    "/playground/{agentId}/demo-conversation": {
       "post": {
         "operationId": "PlaygroundController_generateDemoConversation",
         "parameters": [
@@ -1059,7 +1106,7 @@
         ]
       }
     },
-    "/integrations/pricing-agents/{agentId}/calculate": {
+    "/integrations/{agentId}/price": {
       "post": {
         "operationId": "IntegrationsController_calculatePrice",
         "parameters": [
@@ -1072,10 +1119,10 @@
             }
           },
           {
-            "name": "Authorization",
-            "in": "header",
-            "description": "API token (Bearer token)",
+            "name": "apiKey",
             "required": true,
+            "in": "query",
+            "description": "API key",
             "schema": {
               "type": "string"
             }
@@ -1118,7 +1165,7 @@
         ]
       }
     },
-    "/integrations/pricing-agents/{agentId}/chat": {
+    "/integrations/{agentId}/chat": {
       "post": {
         "operationId": "IntegrationsController_processConversation",
         "parameters": [
@@ -1131,10 +1178,10 @@
             }
           },
           {
-            "name": "Authorization",
-            "in": "header",
-            "description": "API token (Bearer token)",
+            "name": "apiKey",
             "required": true,
+            "in": "query",
+            "description": "API key",
             "schema": {
               "type": "string"
             }
@@ -1182,6 +1229,53 @@
           }
         },
         "summary": "Process human language conversation for pricing calculation",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/integrations/{agentId}/openapi": {
+      "get": {
+        "operationId": "IntegrationsController_getAgentOpenApiSchema",
+        "parameters": [
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "description": "Pricing agent ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apiKey",
+            "required": true,
+            "in": "query",
+            "description": "API key",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OpenAPI schema generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pricing agent or checkpoint not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Generate OpenAPI schema for the agent's pricing endpoint",
         "tags": [
           "integrations"
         ]
@@ -1440,10 +1534,10 @@
             }
           },
           {
-            "name": "checkpointId",
+            "name": "agentId",
             "required": false,
             "in": "query",
-            "description": "Filter by checkpoint ID (optional)",
+            "description": "Filter by agentId (optional)",
             "schema": {
               "type": "string"
             }
@@ -2274,6 +2368,47 @@
         ]
       }
     },
+    "/user-tenants/tenants/{id}/chatwoot-config": {
+      "put": {
+        "operationId": "TenantController_updateTenantChatwootConfig",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantChatwootConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chatwoot configuration updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update tenant Chatwoot configuration",
+        "tags": [
+          "User Tenants"
+        ]
+      }
+    },
     "/user-tenants/{tenantId}/users": {
       "post": {
         "operationId": "TenantController_assignUserToTenant",
@@ -2890,34 +3025,6 @@
           }
         }
       },
-      "AssignmentResultDto": {
-        "type": "object",
-        "properties": {
-          "agentId": {
-            "type": "string"
-          },
-          "datasetId": {
-            "type": "string"
-          },
-          "tenantId": {
-            "type": "string"
-          },
-          "assignedAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "agentId",
-          "datasetId",
-          "tenantId",
-          "assignedAt",
-          "message"
-        ]
-      },
       "HappyPathTestData": {
         "type": "object",
         "properties": {
@@ -3044,6 +3151,92 @@
         "required": [
           "name",
           "createdAt"
+        ]
+      },
+      "AssignmentResultDto": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string"
+          },
+          "datasetId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "assignedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agentId",
+          "datasetId",
+          "tenantId",
+          "assignedAt",
+          "message"
+        ]
+      },
+      "ChatMessageDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "The message content"
+          },
+          "role": {
+            "type": "string",
+            "description": "The role of the message sender (e.g., User, AI)"
+          }
+        },
+        "required": [
+          "message",
+          "role"
+        ]
+      },
+      "ChatConversationDto": {
+        "type": "object",
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "The initial input for the conversation"
+          },
+          "conversation": {
+            "description": "Array of conversation messages",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatMessageDto"
+            }
+          }
+        },
+        "required": [
+          "input",
+          "conversation"
+        ]
+      },
+      "ExampleRequestBodiesDto": {
+        "type": "object",
+        "properties": {
+          "calculatePrice": {
+            "type": "object",
+            "description": "Example request body for price calculation based on the agent's schema"
+          },
+          "chatConversation": {
+            "description": "Example request body for chat conversation",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ChatConversationDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "calculatePrice",
+          "chatConversation"
         ]
       },
       "ChatbotMessage": {
@@ -3755,6 +3948,20 @@
         "required": [
           "chatbotLlmConfiguration"
         ]
+      },
+      "UpdateTenantChatwootConfigDto": {
+        "type": "object",
+        "properties": {
+          "chatbotApiKey": {
+            "type": "string"
+          },
+          "userApiKey": {
+            "type": "string"
+          },
+          "chatwootHost": {
+            "type": "string"
+          }
+        }
       },
       "UpdateTenantDto": {
         "type": "object",

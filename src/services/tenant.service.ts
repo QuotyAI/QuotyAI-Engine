@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { Db } from 'mongodb';
 import { ObjectId } from 'mongodb';
-import { Tenant, User, UserTenant, LLMConfiguration } from '../models/mongodb.model';
+import { Tenant, User, UserTenant, LLMConfiguration, ChatwootConfiguration } from '../models/mongodb.model';
 import { UpdateTenantDto } from '../dtos/update-tenant.dto';
 import { TenantDto } from '../dtos/tenant.dto';
 import { LLMConfigurationResponseDto } from '../dtos/llm-configuration-response.dto';
@@ -142,6 +142,21 @@ export class TenantService {
       {
         $set: {
           chatbotLlmConfiguration: finalConfig,
+          updatedAt: new Date()
+        }
+      },
+      { returnDocument: 'after' }
+    );
+    if (!result?.value) return null;
+    return this.transformTenantToDto(result.value as Tenant);
+  }
+
+  async updateTenantChatwootConfig(tenantId: string, chatwootConfiguration: ChatwootConfiguration): Promise<TenantDto | null> {
+    const result = await this.db.collection('tenants').findOneAndUpdate(
+      { _id: new ObjectId(tenantId), deletedAt: null },
+      {
+        $set: {
+          chatwootConfiguration,
           updatedAt: new Date()
         }
       },

@@ -10,10 +10,10 @@ import { SuccessResponseDto } from '../dtos/success-response.dto';
 import { TenantDto } from '../dtos/tenant.dto';
 import { UserDto } from '../dtos/user.dto';
 import { UserTenantDto } from '../dtos/user-tenant.dto';
-import { LLMConfigurationDto } from '../dtos/llm-configuration.dto';
 import { UpdateTenantBasicInfoDto } from '../dtos/update-tenant-basic-info.dto';
 import { UpdateTenantBuilderLlmConfigDto } from '../dtos/update-tenant-builder-llm-config.dto';
 import { UpdateTenantChatbotLlmConfigDto } from '../dtos/update-tenant-chatbot-llm-config.dto';
+import { UpdateTenantChatwootConfigDto } from '../dtos/update-tenant-chatwoot-config.dto';
 import type { AuthenticatedRequest } from '../auth/auth.guard';
 
 @ApiTags('User Tenants')
@@ -25,12 +25,27 @@ export class TenantController {
   @Post('tenants')
   @ApiOperation({ summary: 'Create a new tenant for user' })
   @ApiResponse({ status: 201, description: 'Tenant created successfully', type: TenantDto })
-  async createUserTenant(@Body() tenantData: CreateTenantDto): Promise<TenantDto> {
-    return this.tenantService.createTenant({
+  async createUserTenant(
+    @Body() tenantData: CreateTenantDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<TenantDto> {
+
+    if (!request.user?.id)
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    const firebaseId = request.user.id;
+    const user = await this.tenantService.getUserByFirebaseId(firebaseId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const tenant = await this.tenantService.createTenant({
       name: tenantData.name,
       description: tenantData.description,
       isActive: tenantData.isActive ?? true
     });
+    
+    await this.tenantService.assignUserToTenant(user._id!.toString(), tenant._id?.toString()!, 'admin');
+    return tenant;
   }
 
   @Get('tenants')
@@ -79,6 +94,16 @@ export class TenantController {
     @Body() body: UpdateTenantChatbotLlmConfigDto
   ): Promise<TenantDto | null> {
     return this.tenantService.updateTenantChatbotLlmConfig(tenantId, body.chatbotLlmConfiguration);
+  }
+
+  @Put('tenants/:id/chatwoot-config')
+  @ApiOperation({ summary: 'Update tenant Chatwoot configuration' })
+  @ApiResponse({ status: 200, description: 'Chatwoot configuration updated successfully', type: TenantDto })
+  async updateTenantChatwootConfig(
+    @Param('id') tenantId: string,
+    @Body() body: UpdateTenantChatwootConfigDto
+  ): Promise<TenantDto | null> {
+    return this.tenantService.updateTenantChatwootConfig(tenantId, body);
   }
 
   // Keep the general update endpoint for backward compatibility

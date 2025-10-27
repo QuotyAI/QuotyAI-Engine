@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HumanMessage } from '@langchain/core/messages';
 import { initChatModel } from 'langchain/chat_models/universal';
-import { LangchainInitModelConfig } from './llm.service';
+import { LangchainInitModelConfig } from './langchain-config.service';
 
 export interface SchemaGenerationRequest {
   inputMessage: string;

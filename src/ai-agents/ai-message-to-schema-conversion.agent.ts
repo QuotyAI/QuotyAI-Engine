@@ -1,11 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { z } from 'zod';
-import { LLMService, LangchainInitModelConfig } from './llm.service';
+import { LangchainInitModelConfig } from './langchain-config.service';
 import { initChatModel } from 'langchain/chat_models/universal';
 
-export interface OrderConversionRequest {
+export interface MessageToSchemaConversionRequest {
   conversationHistory: Array<{
     message: string;
     role: 'AI' | 'User';
@@ -14,7 +13,7 @@ export interface OrderConversionRequest {
   schema: string;
 }
 
-export interface OrderConversionResponse {
+export interface MessageToSchemaConversionResponse {
   structuredOrderInput: any;
 }
 
@@ -23,20 +22,20 @@ const OrderConversionSchema = z.object({
 }).describe('Schema for converting natural language order into structured JSON object');
 
 @Injectable()
-export class AiOrderConversionAgentService {
-  private readonly logger = new Logger(AiOrderConversionAgentService.name);
+export class AiMessageToSchemaConversionAgentService {
+  private readonly logger = new Logger(AiMessageToSchemaConversionAgentService.name);
 
   constructor() {
     this.logger.log('AiOrderConversionAgentService initialized');
   }
 
-  async convertOrder(request: OrderConversionRequest, llmConfig: LangchainInitModelConfig): Promise<OrderConversionResponse> {
+  async convertOrder(request: MessageToSchemaConversionRequest, llmConfig: LangchainInitModelConfig): Promise<MessageToSchemaConversionResponse> {
     this.logger.log(`Converting conversation to structured format`);
 
     try {
       // Generate the prompt using the embedded template
-      const systemPrompt = this.generateSystemPrompt(request.schema);
-      const userMessage = this.generateUserMessage(request.conversationHistory, request.newUserMessage);
+      const systemPrompt = this.generateSystemPrompt();
+      const userMessage = this.generateUserMessage(request.conversationHistory, request.newUserMessage, request.schema);
 
       this.logger.debug(`Prompt generated: ${systemPrompt.length + userMessage.length} characters`);
 
@@ -63,12 +62,12 @@ export class AiOrderConversionAgentService {
     }
   }
 
-  private generateSystemPrompt(schema: string): string {
+  private generateSystemPrompt(): string {
     return `<role>You are an expert data analyst specializing in converting natural language orders into structured JSON objects.
 Your task is to parse human-readable order descriptions and convert them into properly formatted data structures that match the provided schema.</role>
 
-  <task>Convert the natural language order description into a structured JSON object that matches the provided OrderInput schema.
-  The output must include the structuredOrderInput that matches the schema exactly.
+<task>Convert the natural language order description into a structured JSON object that matches the provided OrderInput schema.
+The output must include the structuredOrderInput that matches the schema exactly.
 
 Key Requirements:
 - The structured data must accurately represent all services, options, and constraints explicitly mentioned in the natural language input
@@ -80,90 +79,108 @@ The output must include:
 - structuredOrderInput as a valid OrderInput object matching the schema exactly
 - Proper JSON structure for all input components matching the OrderInput schema</task>
 
-  <order-schema>
-  ${schema}
-  </order-schema>
+<example>
 
-  <example>
-  Input Conversation History:
-  [
-    {
-      "message": "I need cleaning services for my apartment",
-      "role": "User"
-    },
-    {
-      "message": "I'd be happy to help you with cleaning services for your apartment. What type of cleaning are you interested in - general cleaning, deep cleaning, or upholstery cleaning?",
-      "role": "AI"
-    },
-    {
-      "message": "General cleaning and also my sofa needs cleaning",
-      "role": "User"
-    },
-    {
-      "message": "Great! So you need general cleaning for your apartment and upholstery cleaning for your sofa. For the general cleaning, would you like a one-time service or recurring? And for the sofa, could you tell me what type it is (2-seats, 3-seats, etc.)?",
-      "role": "AI"
-    },
-    {
-      "message": "One-time general cleaning and it's a 2-seat sofa",
-      "role": "User"
-    },
-    {
-      "message": "Perfect! I've noted your requirements: one-time general cleaning service for your apartment and upholstery cleaning for a 2-seat sofa. Is there anything else you'd like to add or any specific areas that need extra attention?",
-      "role": "AI"
-    }
-  ]
+<schema-example>
+interface OrderInput {
+  services: Service[];
+}
 
-  New User Message: "That covers everything. Please proceed with getting me a quote."
+interface Service {
+  type: string; // e.g., "GeneralCleaning", "Upholstery"
+  option?: string; // e.g., "3h-single"
+  numberOfVisits?: number; // e.g., 1
+  item?: string; // e.g., "2-seats"
+  quantity?: number; // e.g., 1
+}
+</schema-example>
 
-  Example Output:
+<input-example>
+[
   {
-    "structuredOrderInput": {
-      "services": [
-        {
-          "type": "GeneralCleaning",
-          "option": "3h-single",
-          "numberOfVisits": 1
-        },
-        {
-          "type": "Upholstery",
-          "item": "2-seats",
-          "quantity": 1
-        }
-      ]
-    }
+    "message": "I need cleaning services for my apartment",
+    "role": "User"
+  },
+  {
+    "message": "I'd be happy to help you with cleaning services for your apartment. What type of cleaning are you interested in - general cleaning, deep cleaning, or upholstery cleaning?",
+    "role": "AI"
+  },
+  {
+    "message": "General cleaning and also my sofa needs cleaning",
+    "role": "User"
+  },
+  {
+    "message": "Great! So you need general cleaning for your apartment and upholstery cleaning for your sofa. For the general cleaning, would you like a one-time service or recurring? And for the sofa, could you tell me what type it is (2-seats, 3-seats, etc.)?",
+    "role": "AI"
+  },
+  {
+    "message": "One-time general cleaning and it's a 2-seat sofa",
+    "role": "User"
+  },
+  {
+    "message": "Perfect! I've noted your requirements: one-time general cleaning service for your apartment and upholstery cleaning for a 2-seat sofa. Is there anything else you'd like to add or any specific areas that need extra attention?",
+    "role": "AI"
   }
-  </example>
+]
 
-  <constraints>
-  - **CRITICAL: You MUST generate a structured output for the input provided**
-  - Output must be valid JSON with a single key "structuredOrderInput"
-  - structuredOrderInput must be a valid OrderInput object matching the schema exactly
-  - Use correct enum values and data types
-  - Include all required fields for each service type
-  - Handle quantities and visit numbers correctly
-  - Respect service combination rules
-  - Parse natural language accurately to extract all service details
-  - Handle multiple services in a single order
-  - Use the exact property names from the schema
-  - Ensure JSON is properly formatted and can be parsed by standard JSON parsers
-  </constraints>
+New User Message: "That covers everything. Please proceed with getting me a quote."
 
-  <output-format>
-  Generate only a valid JSON object matching the schema. No additional text, explanations, or markdown formatting.
-  The JSON must be syntactically correct and directly usable in a JavaScript/TypeScript environment.
-  </output-format>`;
+</input-example>
+
+<output-example>
+{
+  "structuredOrderInput": {
+    "services": [
+      {
+        "type": "GeneralCleaning",
+        "option": "3h-single",
+        "numberOfVisits": 1
+      },
+      {
+        "type": "Upholstery",
+        "item": "2-seats",
+        "quantity": 1
+      }
+    ]
+  }
+}
+</output-example>
+</example>
+
+<constraints>
+- **CRITICAL: You MUST generate a structured output for the input provided**
+- Output must be valid JSON with a single key "structuredOrderInput"
+- structuredOrderInput must be a valid OrderInput object matching the schema exactly
+- Use correct enum values and data types
+- Include all required fields for each service type
+- Handle quantities and visit numbers correctly
+- Respect service combination rules
+- Parse natural language accurately to extract all service details
+- Handle multiple services in a single order
+- Use the exact property names from the schema
+- Ensure JSON is properly formatted and can be parsed by standard JSON parsers
+</constraints>
+
+<output-format>
+Generate only a valid JSON object matching the schema. No additional text, explanations, or markdown formatting.
+The JSON must be syntactically correct and directly usable in a JavaScript/TypeScript environment.
+</output-format>`;
   }
 
-  private generateUserMessage(conversationHistory: Array<{message: string; role: 'AI' | 'User'}>, newUserMessage: string): string {
+  private generateUserMessage(conversationHistory: Array<{message: string; role: 'AI' | 'User'}>, newUserMessage: string, schema: string): string {
     return `Convert the following conversation into a structured JSON object according to the provided OrderInput schema.
 
-  <conversation-history>
-  ${JSON.stringify(conversationHistory, null, 2)}
-  </conversation-history>
+<conversation-history>
+${JSON.stringify(conversationHistory, null, 2)}
+</conversation-history>
 
-  <new-user-message>
-  ${newUserMessage}
-  </new-user-message>`;
+<new-user-message>
+${newUserMessage}
+</new-user-message>
+
+<order-schema>
+${schema}
+</order-schema>`;
   }
 
   private convertLlmOutputToSchema(rawOutput: string): z.infer<typeof OrderConversionSchema> {

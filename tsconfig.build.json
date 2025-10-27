@@ -4,6 +4,7 @@
     "node_modules", 
     "test", 
     "dist", 
+    "**/*openapi-ts.config.ts",
     "**/*spec.ts", // Excludes unit test files
     "**/*e2e-spec.ts" // Excludes e2e test files
   ]

@@ -11,8 +11,8 @@ export interface LangchainInitModelConfig {
 }
 
 @Injectable()
-export class LLMService {
-  private readonly logger = new Logger(LLMService.name);
+export class LangchainCongigService {
+  private readonly logger = new Logger(LangchainCongigService.name);
 
   constructor(private readonly tenantService: TenantService) {}
 

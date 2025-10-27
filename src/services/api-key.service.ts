@@ -104,14 +104,15 @@ export class ApiKeyService {
     return deleted;
   }
 
-  async validateApiKey(rawToken: string): Promise<ApiKey | null> {
-    const hashedToken = this.hashToken(rawToken);
+  async validateApiKey(hashedToken: string): Promise<ApiKey | null> {
+    //const hashedToken = this.hashToken(rawKey);
     const apiKey = await this.apiKeyCollection.findOne({
       key: hashedToken,
       isActive: true,
       deletedAt: null,
       $or: [
         { expiresAt: { $exists: false } },
+        { expiresAt: { $eq: null } } as any,
         { expiresAt: { $gt: new Date() } }
       ]
     });
@@ -122,6 +123,8 @@ export class ApiKeyService {
         { _id: apiKey._id },
         { $set: { lastUsedAt: new Date() } }
       );
+    } else {
+      console.debug(`validateApiKey token=${hashedToken} not found`);
     }
 
     return apiKey;

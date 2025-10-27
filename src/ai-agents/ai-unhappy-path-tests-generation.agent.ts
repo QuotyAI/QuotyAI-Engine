@@ -3,7 +3,7 @@ import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { UnhappyPathTestData, ExpectedErrorType } from 'src/models/mongodb.model';
 import { z } from 'zod';
-import { LLMService, LangchainInitModelConfig } from './llm.service';
+import { LangchainCongigService, LangchainInitModelConfig } from './langchain-config.service';
 import { initChatModel } from 'langchain/chat_models/universal';
 
 const UnhappyPathTestDataSchema = z.object({
@@ -18,7 +18,7 @@ const UnhappyPathTestDataSchema = z.object({
 export class AiUnhappyPathDatasetGenerationAgentService {
   private readonly logger = new Logger(AiUnhappyPathDatasetGenerationAgentService.name);
 
-  constructor(private readonly llmService: LLMService) {
+  constructor(private readonly llmService: LangchainCongigService) {
     this.logger.log('AiUnhappyPathDatasetGenerationAgentService initialized');
   }
 

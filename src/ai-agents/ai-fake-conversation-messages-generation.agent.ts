@@ -1,16 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { z } from 'zod';
-import { LangchainInitModelConfig } from './llm.service';
+import { LangchainInitModelConfig } from './langchain-config.service';
 import { initChatModel } from 'langchain/chat_models/universal';
 
-export interface DemoConversationGenerationRequest {
+export interface FakeConversationMessagesGenerationRequest {
   pricingAgentContext: string;
   functionSchema: string;
   functionCode: string;
 }
 
-export interface DemoConversationGenerationResponse {
+export interface FakeConversationMessagesGenerationResponse {
   conversationHistory: Array<{
     message: string;
     role: 'AI' | 'User';
@@ -27,14 +27,14 @@ const DemoConversationSchema = z.object({
 }).describe('Schema for generating demo conversations with conversation history and next user message');
 
 @Injectable()
-export class AiDemoConversationAgentService {
-  private readonly logger = new Logger(AiDemoConversationAgentService.name);
+export class AiFakeConversationMessagesGenerationAgentService {
+  private readonly logger = new Logger(AiFakeConversationMessagesGenerationAgentService.name);
 
   constructor() {
     this.logger.log('AiDemoConversationAgentService initialized');
   }
 
-  async generateDemoConversation(request: DemoConversationGenerationRequest, llmConfig: LangchainInitModelConfig): Promise<DemoConversationGenerationResponse> {
+  async generateDemoConversation(request: FakeConversationMessagesGenerationRequest, llmConfig: LangchainInitModelConfig): Promise<FakeConversationMessagesGenerationResponse> {
     this.logger.log(`Generating demo conversation for pricing agent`);
 
     try {

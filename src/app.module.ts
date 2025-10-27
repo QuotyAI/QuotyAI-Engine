@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PricingAgentsController } from './controllers/pricing-agents.controller';
 import { PlaygroundController } from './controllers/playground.controller';
@@ -17,16 +17,19 @@ import { AuthModule } from './auth/auth.module';
 import { DatasetsController } from './controllers/datasets.controller';
 import { AuthController } from './controllers/auth.controller';
 import { ApiKeyService } from './services/api-key.service';
-import { LLMService } from './ai-agents/llm.service';
+import { LangchainCongigService } from './ai-agents/langchain-config.service';
 import { AiFormulaGenerationAgentService } from './ai-agents/ai-formula-generation.agent';
 import { AiHappyPathDatasetGenerationAgentService } from './ai-agents/ai-happy-path-dataset-generation.agent';
 import { AiUnhappyPathDatasetGenerationAgentService } from './ai-agents/ai-unhappy-path-tests-generation.agent';
-import { AiOrderConversionAgentService } from './ai-agents/ai-order-conversion.agent';
+import { AiMessageToSchemaConversionAgentService } from './ai-agents/ai-message-to-schema-conversion.agent';
 import { AiSchemaGenerationAgentService } from './ai-agents/ai-schema-generation.agent';
-import { AiTestsetGenerationAgentService } from './ai-agents/ai-testset-generator.agent';
-import { AiPlaygroundMessageAgentService } from './ai-agents/ai-playground-message.agent';
-import { AiDemoConversationAgentService } from './ai-agents/ai-demo-conversation.agent';
-import { AiPricingTableExtractionAgentService } from './ai-agents/ai-pricing-table-extraction.agent';
+import { AiDatasetToTestsetGenerationAgentService } from './ai-agents/ai-dataset-to-testset-generation.agent';
+import { NaturalLanguageResponseGenerationAgentService } from './ai-agents/ai-natural-language-response-generation.agent';
+import { AiFakeConversationMessagesGenerationAgentService } from './ai-agents/ai-fake-conversation-messages-generation.agent';
+import { AiOcrPricingTablesAgentService } from './ai-agents/ai-ocr-pricing-tables.agent';
+import { ExampleGeneratorService } from './services/example-generator.service';
+import { OpenApiGeneratorService } from './services/openapi-generator.service';
+import { TenantAccessMiddleware } from './middleware/tenant-access.middleware';
 
 @Module({
   imports: [
@@ -56,16 +59,24 @@ import { AiPricingTableExtractionAgentService } from './ai-agents/ai-pricing-tab
     TenantService,
     DynamicRunnerService,
     ApiKeyService,
-    LLMService,
+    LangchainCongigService,
     AiFormulaGenerationAgentService,
     AiHappyPathDatasetGenerationAgentService,
     AiUnhappyPathDatasetGenerationAgentService,
-    AiOrderConversionAgentService,
+    AiMessageToSchemaConversionAgentService,
     AiSchemaGenerationAgentService,
-    AiTestsetGenerationAgentService,
-    AiPlaygroundMessageAgentService,
-    AiDemoConversationAgentService,
-    AiPricingTableExtractionAgentService
+    AiDatasetToTestsetGenerationAgentService,
+    NaturalLanguageResponseGenerationAgentService,
+    AiFakeConversationMessagesGenerationAgentService,
+    AiOcrPricingTablesAgentService,
+    ExampleGeneratorService,
+    OpenApiGeneratorService
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(TenantAccessMiddleware)
+      .forRoutes('*'); // Apply to all routes
+  }
+}

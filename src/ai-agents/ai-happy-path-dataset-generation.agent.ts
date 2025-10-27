@@ -4,7 +4,7 @@ import { HumanMessage } from '@langchain/core/messages';
 import { initChatModel } from 'langchain/chat_models/universal';
 import { HappyPathTestData } from 'src/models/mongodb.model';
 import { z } from 'zod';
-import { LangchainInitModelConfig } from './llm.service';
+import { LangchainInitModelConfig } from './langchain-config.service';
 
 const HappyPathTestDataSchema = z.object({
   tests: z.array(z.object({

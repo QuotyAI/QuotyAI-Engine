@@ -2,13 +2,13 @@ import { Controller, Post, Param, Body, Query, Headers, HttpException, HttpStatu
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiHeader, ApiResponse } from '@nestjs/swagger';
 import { Db } from 'mongodb';
 import { ObjectId } from 'mongodb';
-import { AiOrderConversionAgentService } from '../ai-agents/ai-order-conversion.agent';
-import { AiPlaygroundMessageAgentService } from '../ai-agents/ai-playground-message.agent';
-import { AiDemoConversationAgentService } from '../ai-agents/ai-demo-conversation.agent';
+import { AiMessageToSchemaConversionAgentService } from '../ai-agents/ai-message-to-schema-conversion.agent';
+import { NaturalLanguageResponseGenerationAgentService } from '../ai-agents/ai-natural-language-response-generation.agent';
+import { AiFakeConversationMessagesGenerationAgentService } from '../ai-agents/ai-fake-conversation-messages-generation.agent';
 import { DynamicRunnerService } from '../services/dynamic-runner.service';
 import { PlaygroundExecutionRequestDto, PlaygroundExecutionResponseDto, DemoConversationResponseDto } from '../dtos/playground-execution.dto';
 import { AuthGuard } from '../auth/auth.guard';
-import { LLMService } from 'src/ai-agents/llm.service';
+import { LangchainCongigService } from 'src/ai-agents/langchain-config.service';
 
 @ApiTags('playground')
 @Controller('playground')
@@ -18,11 +18,11 @@ export class PlaygroundController {
 
   constructor(
     @Inject('DATABASE_CONNECTION') private db: Db,
-    private readonly aiOrderConversionAgent: AiOrderConversionAgentService,
-    private readonly aiPlaygroundMessageAgent: AiPlaygroundMessageAgentService,
-    private readonly aiDemoConversationAgent: AiDemoConversationAgentService,
+    private readonly aiOrderConversionAgent: AiMessageToSchemaConversionAgentService,
+    private readonly aiPlaygroundMessageAgent: NaturalLanguageResponseGenerationAgentService,
+    private readonly aiDemoConversationAgent: AiFakeConversationMessagesGenerationAgentService,
     private readonly dynamicRunnerService: DynamicRunnerService,
-    private readonly llmService: LLMService,
+    private readonly llmService: LangchainCongigService,
   ) {
     this.logger.log('PlaygroundController initialized');
   }
@@ -32,7 +32,7 @@ export class PlaygroundController {
   }
 
   // Playground execution endpoint - conversation to parameters conversion, function execution, AI message generation
-  @Post('pricing-agents/:agentId/playground')
+  @Post(':agentId/playground')
   @ApiOperation({ summary: 'Execute agent with natural language input for playground testing' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
   @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
@@ -128,7 +128,7 @@ export class PlaygroundController {
   }
 
   // Demo conversation generation endpoint
-  @Post('pricing-agents/:agentId/demo-conversation')
+  @Post(':agentId/demo-conversation')
   @ApiOperation({ summary: 'Generate a demo conversation for the pricing agent' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
   @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })

@@ -82,6 +82,17 @@ export class LLMConfiguration {
   useByok: boolean;
 }
 
+export class ChatwootConfiguration {
+  @ApiProperty({ type: String, required: false })
+  chatbotApiKey?: string;
+
+  @ApiProperty({ type: String, required: false })
+  userApiKey?: string;
+
+  @ApiProperty({ type: String, required: false })
+  chatwootHost?: string;
+}
+
 export class Tenant {
   @ApiProperty({ name: '_id', type: String, format: 'uuid' })
   _id?: ObjectId;
@@ -103,6 +114,9 @@ export class Tenant {
 
   @ApiProperty({ type: LLMConfiguration, required: false })
   chatbotLlmConfiguration?: LLMConfiguration;
+
+  @ApiProperty({ type: ChatwootConfiguration, required: false })
+  chatwootConfiguration?: ChatwootConfiguration;
 
   @ApiProperty({ type: Date })
   createdAt: Date;

@@ -12,10 +12,10 @@ import {
 import { CheckpointTestsetDto, CheckpointHappyPathTestWithData, CheckpointUnhappyPathTestWithData } from '../dtos/checkpoint-testset.dto';
 import { AiHappyPathDatasetGenerationAgentService } from '../ai-agents/ai-happy-path-dataset-generation.agent';
 import { AiUnhappyPathDatasetGenerationAgentService } from 'src/ai-agents/ai-unhappy-path-tests-generation.agent';
-import { AiTestsetGenerationAgentService } from '../ai-agents/ai-testset-generator.agent';
+import { AiDatasetToTestsetGenerationAgentService } from '../ai-agents/ai-dataset-to-testset-generation.agent';
 import { DynamicRunnerService } from './dynamic-runner.service';
 import { TestingDatasetWithTestsDto } from 'src/dtos/testing-dataset-with-tests.dto';
-import { LLMService } from 'src/ai-agents/llm.service';
+import { LangchainCongigService } from 'src/ai-agents/langchain-config.service';
 
 type TestingDatasetFilter = Filter<TestingDataset>;
 type TestingDatasetAssignmentFilter = Filter<TestingDatasetAssignment>;
@@ -24,7 +24,7 @@ type DatasetUnhappyPathTestFilter = Filter<DatasetUnhappyPathTestData>;
 type CheckpointHappyPathTestFilter = Filter<CheckpointHappyPathTestRun>;
 type CheckpointUnhappyPathTestFilter = Filter<CheckpointUnhappyPathTestRun>;
 type SearchCriteria = {
-  checkpointId?: string;
+  agentId?: string;
   tenantId?: string;
   name?: string;
   description?: string;
@@ -39,9 +39,9 @@ export class TestingDatasetService {
     @Inject('DATABASE_CONNECTION') private db: Db,
     private readonly aiHappyPathDatasetGenerationAgent: AiHappyPathDatasetGenerationAgentService,
     private readonly aiUnhappyPathDatasetGenerationAgent: AiUnhappyPathDatasetGenerationAgentService,
-    private readonly aiTestsetGenerationAgent: AiTestsetGenerationAgentService,
+    private readonly aiTestsetGenerationAgent: AiDatasetToTestsetGenerationAgentService,
     private readonly dynamicRunnerService: DynamicRunnerService,
-    private readonly llmService: LLMService,
+    private readonly llmService: LangchainCongigService,
   ) {
     this.logger.log('TestingDatasetService initialized');
   }
@@ -212,15 +212,15 @@ export class TestingDatasetService {
       let filter: TestingDatasetFilter;
 
       // If checkpointId is provided, get datasets assigned to that checkpoint
-      if (searchCriteria.checkpointId) {
+      if (searchCriteria.agentId) {
         const assignments = await this.testingDatasetAssignmentCollection.find(
           this.buildTestingDatasetAssignmentFilter(searchCriteria.tenantId, {
-            pricingAgentId: new ObjectId(searchCriteria.checkpointId)
+            pricingAgentId: new ObjectId(searchCriteria.agentId)
           })
         ).toArray();
 
         if (assignments.length === 0) {
-          this.logger.log(`No assigned testing datasets for agent: ${searchCriteria.checkpointId}`);
+          this.logger.log(`No assigned testing datasets for agent: ${searchCriteria.agentId}`);
           return [];
         }
 
@@ -282,45 +282,45 @@ export class TestingDatasetService {
     }
   }
 
-  async findOneTestingDataset(id: string, tenantId?: string): Promise<TestingDataset | null> {
-    this.logger.log(`Finding testing dataset: ${id} for tenant: ${tenantId}`);
+  async findOneTestingDataset(datasetId: string, tenantId?: string): Promise<TestingDataset | null> {
+    this.logger.log(`Finding testing dataset: ${datasetId} for tenant: ${tenantId}`);
 
     try {
-      const filter = this.buildTestingDatasetFilter(tenantId, { _id: new ObjectId(id) });
+      const filter = this.buildTestingDatasetFilter(tenantId, { _id: new ObjectId(datasetId) });
       const dataset = await this.testingDatasetCollection.findOne(filter);
 
       if (dataset) {
-        this.logger.log(`Successfully found testing dataset: ${dataset.name} (${id})`);
+        this.logger.log(`Successfully found testing dataset: ${dataset.name} (${datasetId})`);
       } else {
-        this.logger.warn(`Testing dataset not found: ${id} for tenant: ${tenantId}`);
+        this.logger.warn(`Testing dataset not found: ${datasetId} for tenant: ${tenantId}`);
       }
 
       return dataset;
     } catch (error) {
-      this.logger.error(`Failed to find testing dataset ${id}: ${error.message}`, error.stack);
+      this.logger.error(`Failed to find testing dataset ${datasetId}: ${error.message}`, error.stack);
       throw error;
     }
   }
 
-  async findOneTestingDatasetWithTests(id: string, tenantId?: string): Promise<TestingDatasetWithTestsDto> {
-    this.logger.log(`Finding testing dataset with tests: ${id} for tenant: ${tenantId}`);
+  async findOneTestingDatasetWithTests(datasetId: string, tenantId?: string): Promise<TestingDatasetWithTestsDto> {
+    this.logger.log(`Finding testing dataset with tests: ${datasetId} for tenant: ${tenantId}`);
 
     try {
-      const dataset = await this.findOneTestingDataset(id, tenantId);
+      const dataset = await this.findOneTestingDataset(datasetId, tenantId);
 
       if (!dataset) {
-        this.logger.warn(`Testing dataset not found: ${id} for tenant: ${tenantId}`);
-        throw new Error(`Testing dataset not found: ${id}`);
+        this.logger.warn(`Testing dataset not found: ${datasetId} for tenant: ${tenantId}`);
+        throw new Error(`Testing dataset not found: ${datasetId}`);
       }
 
       // Fetch happy path tests
       const happyPathTests = await this.datasetHappyPathTestCollection.find(
-        this.buildDatasetHappyPathTestFilter(tenantId, { testingDatasetId: new ObjectId(id) })
+        this.buildDatasetHappyPathTestFilter(tenantId, { testingDatasetId: new ObjectId(datasetId) })
       ).toArray();
 
       // Fetch unhappy path tests
       const unhappyPathTests = await this.datasetUnhappyPathTestCollection.find(
-        this.buildDatasetUnhappyPathTestFilter(tenantId, { testingDatasetId: new ObjectId(id) })
+        this.buildDatasetUnhappyPathTestFilter(tenantId, { testingDatasetId: new ObjectId(datasetId) })
       ).toArray();
 
       const result: TestingDatasetWithTestsDto = {
@@ -330,52 +330,52 @@ export class TestingDatasetService {
         unhappyPathTests: unhappyPathTests
       };
 
-      this.logger.log(`Successfully found testing dataset with tests: ${dataset.name} (${id})`);
+      this.logger.log(`Successfully found testing dataset with tests: ${dataset.name} (${datasetId})`);
       return result;
     } catch (error) {
-      this.logger.error(`Failed to find testing dataset with tests ${id}: ${error.message}`, error.stack);
+      this.logger.error(`Failed to find testing dataset with tests ${datasetId}: ${error.message}`, error.stack);
       throw error;
     }
   }
 
-  async updateTestingDataset(id: string, updateData: Partial<Omit<TestingDataset, '_id' | 'createdAt'>>, tenantId?: string): Promise<TestingDataset | null> {
-    this.logger.log(`Updating testing dataset: ${id} for tenant: ${tenantId}`);
+  async updateTestingDataset(datasetId: string, updateData: Partial<Omit<TestingDataset, '_id' | 'createdAt'>>, tenantId?: string): Promise<TestingDataset | null> {
+    this.logger.log(`Updating testing dataset: ${datasetId} for tenant: ${tenantId}`);
 
     try {
-      const filter = this.buildTestingDatasetFilter(tenantId, { _id: new ObjectId(id) });
+      const filter = this.buildTestingDatasetFilter(tenantId, { _id: new ObjectId(datasetId) });
       await this.testingDatasetCollection.updateOne(filter, { $set: updateData });
-      const updatedDataset = await this.findOneTestingDataset(id, tenantId);
+      const updatedDataset = await this.findOneTestingDataset(datasetId, tenantId);
 
       if (updatedDataset) {
-        this.logger.log(`Successfully updated testing dataset: ${updatedDataset.name} (${id})`);
+        this.logger.log(`Successfully updated testing dataset: ${updatedDataset.name} (${datasetId})`);
       } else {
-        this.logger.warn(`Testing dataset not found after update: ${id} for tenant: ${tenantId}`);
+        this.logger.warn(`Testing dataset not found after update: ${datasetId} for tenant: ${tenantId}`);
       }
 
       return updatedDataset;
     } catch (error) {
-      this.logger.error(`Failed to update testing dataset ${id}: ${error.message}`, error.stack);
+      this.logger.error(`Failed to update testing dataset ${datasetId}: ${error.message}`, error.stack);
       throw error;
     }
   }
 
-  async deleteTestingDataset(id: string, tenantId?: string): Promise<boolean> {
-    this.logger.log(`Soft deleting testing dataset: ${id} for tenant: ${tenantId}`);
+  async deleteTestingDataset(datasetId: string, tenantId?: string): Promise<boolean> {
+    this.logger.log(`Soft deleting testing dataset: ${datasetId} for tenant: ${tenantId}`);
 
     try {
-      const filter = this.buildTestingDatasetFilter(tenantId, { _id: new ObjectId(id) });
+      const filter = this.buildTestingDatasetFilter(tenantId, { _id: new ObjectId(datasetId) });
       const result = await this.testingDatasetCollection.updateOne(filter, { $set: { deletedAt: new Date() } });
       const deleted = result.modifiedCount > 0;
 
       if (deleted) {
-        this.logger.log(`Successfully soft deleted testing dataset: ${id}`);
+        this.logger.log(`Successfully soft deleted testing dataset: ${datasetId}`);
       } else {
-        this.logger.warn(`Testing dataset not found for deletion: ${id} for tenant: ${tenantId}`);
+        this.logger.warn(`Testing dataset not found for deletion: ${datasetId} for tenant: ${tenantId}`);
       }
 
       return deleted;
     } catch (error) {
-      this.logger.error(`Failed to soft delete testing dataset ${id}: ${error.message}`, error.stack);
+      this.logger.error(`Failed to soft delete testing dataset ${datasetId}: ${error.message}`, error.stack);
       throw error;
     }
   }
@@ -421,7 +421,7 @@ export class TestingDatasetService {
       const llmConfig = await this.llmService.getTenantLLMConfig(tenantId);
 
       // Generate structured test cases using AI
-      const generatedInputs = await this.aiTestsetGenerationAgent.generateTypedOrderInputs({
+      const generatedInputs = await this.aiTestsetGenerationAgent.datasetToTestset({
         happyPathTests: datasetHappyPathTests,
         unhappyPathTests: datasetUnhappyPathTests,
         checkpoint: checkpoint,

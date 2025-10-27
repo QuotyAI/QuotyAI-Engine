@@ -13,6 +13,9 @@ import { AuthGuard } from '../auth/auth.guard';
 import { TestingDatasetService } from 'src/services/testing-dataset.service';
 import { AssignmentResultDto } from 'src/dtos/assignment-result.dto';
 import { TestingDatasetWithTestsDto } from 'src/dtos/testing-dataset-with-tests.dto';
+import { ExampleRequestBodiesDto } from 'src/dtos/example-request-bodies.dto';
+import { ExampleGeneratorService } from 'src/services/example-generator.service';
+import { OpenApiGeneratorService } from '../services/openapi-generator.service';
 
 /**
  * REST API controller for pricing agent management and AI-powered code generation.
@@ -41,7 +44,9 @@ export class PricingAgentsController {
 
   constructor(
     private readonly pricingAgentService: PricingAgentService,
-    private readonly testingDatasetService: TestingDatasetService) {
+    private readonly testingDatasetService: TestingDatasetService,
+    private readonly exampleGeneratorService: ExampleGeneratorService,
+    ) {
     this.logger.log('pricingAgentsController initialized');
   }
 
@@ -599,6 +604,64 @@ export class PricingAgentsController {
     }
   }
 
+  @Post('/:agentId/datasets/build/')
+  @ApiOperation({ summary: 'AI generate testing dataset' })
+  @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
+  @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
+  @ApiQuery({ name: 'checkpointId', description: 'Checkpoint ID (optional, uses latest if not provided)', required: false })
+  @ApiResponse({ status: 200, description: 'Dataset generated successfully', type: TestingDatasetWithTestsDto })
+  @ApiResponse({ status: 404, description: 'Pricing agent or checkpoint not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async aiGenerateDataset(
+    @Param('agentId') agentId: string,
+    @Headers('X-Tenant-ID') tenantId?: string,
+    @Query('checkpointId') checkpointId?: string
+  ): Promise<TestingDatasetWithTestsDto> {
+    this.logger.log(`Building tests for agent: ${agentId} for tenant: ${tenantId}`);
+
+    try {
+      // If checkpointId is not provided, get the latest checkpoint for the agent
+      let targetCheckpointId = checkpointId;
+      if (!targetCheckpointId) {
+        const latestCheckpoint = await this.pricingAgentService.findLatestCheckpoint(agentId, tenantId);
+        if (!latestCheckpoint) {
+          this.logger.warn(`No checkpoint found for tests build: ${agentId} for tenant: ${tenantId}`);
+          throw new HttpException('No checkpoint found for the specified agent', HttpStatus.NOT_FOUND);
+        }
+        targetCheckpointId = latestCheckpoint._id!.toString();
+      }
+
+      const checkpoint = await this.pricingAgentService.findOneCheckpoint(targetCheckpointId, tenantId);
+      if (!checkpoint) {
+        this.logger.warn(`Checkpoint not found for tests build: ${agentId}, checkpoint: ${targetCheckpointId}`);
+        throw new HttpException('Checkpoint not found', HttpStatus.NOT_FOUND);
+      }
+
+      const agent = await this.pricingAgentService.findOnePricingAgent(agentId, tenantId);
+      if (!agent) {
+        this.logger.warn(`Pricing agent not found for tests build: ${agentId}`);
+        throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
+      }
+
+      const result = await this.testingDatasetService.aiGenerateDataset(checkpoint, agent.name, tenantId);
+
+      this.logger.log(`Successfully built tests for agent: ${agentId}, checkpoint: ${checkpoint._id}`);
+
+      const dataset = await this.testingDatasetService.findOneTestingDatasetWithTests(result._id!.toString(), tenantId);
+      return dataset;
+    } catch (error) {
+      this.logger.error(`Failed to build tests for agent ${agentId}: ${error.message}`, error.stack);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        `Failed to build tests: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
   @Post('/:agentId/datasets/:datasetId')
   @ApiOperation({ summary: 'Assign a testing dataset to a pricing agent checkpoint' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
@@ -706,61 +769,59 @@ export class PricingAgentsController {
     }
   }
 
-  @Post('/:agentId/datasets/build/')
-  @ApiOperation({ summary: 'AI generate testing dataset' })
+  @Get(':agentId/schema-examples')
+  @ApiOperation({ summary: 'Get example request bodies for agent endpoints' })
   @ApiParam({ name: 'agentId', description: 'Pricing agent ID' })
   @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant ID', required: false })
-  @ApiQuery({ name: 'checkpointId', description: 'Checkpoint ID (optional, uses latest if not provided)', required: false })
-  @ApiResponse({ status: 200, description: 'Dataset generated successfully', type: TestingDatasetWithTestsDto })
+  @ApiResponse({ status: 200, description: 'Example request bodies generated successfully', type: ExampleRequestBodiesDto })
   @ApiResponse({ status: 404, description: 'Pricing agent or checkpoint not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async aiGenerateDataset(
+  async getExampleRequestBodies(
     @Param('agentId') agentId: string,
     @Headers('X-Tenant-ID') tenantId?: string,
-    @Query('checkpointId') checkpointId?: string
-  ): Promise<TestingDatasetWithTestsDto> {
-    this.logger.log(`Building tests for agent: ${agentId} for tenant: ${tenantId}`);
-
+  ): Promise<ExampleRequestBodiesDto> {
     try {
-      // If checkpointId is not provided, get the latest checkpoint for the agent
-      let targetCheckpointId = checkpointId;
-      if (!targetCheckpointId) {
-        const latestCheckpoint = await this.pricingAgentService.findLatestCheckpoint(agentId, tenantId);
-        if (!latestCheckpoint) {
-          this.logger.warn(`No checkpoint found for tests build: ${agentId} for tenant: ${tenantId}`);
-          throw new HttpException('No checkpoint found for the specified agent', HttpStatus.NOT_FOUND);
-        }
-        targetCheckpointId = latestCheckpoint._id!.toString();
-      }
+      this.logger.log(`Getting example request bodies for agent: ${agentId}`);
 
-      const checkpoint = await this.pricingAgentService.findOneCheckpoint(targetCheckpointId, tenantId);
-      if (!checkpoint) {
-        this.logger.warn(`Checkpoint not found for tests build: ${agentId}, checkpoint: ${targetCheckpointId}`);
-        throw new HttpException('Checkpoint not found', HttpStatus.NOT_FOUND);
-      }
-
+      // Find the latest deployed checkpoint for the agent
       const agent = await this.pricingAgentService.findOnePricingAgent(agentId, tenantId);
       if (!agent) {
-        this.logger.warn(`Pricing agent not found for tests build: ${agentId}`);
         throw new HttpException('Pricing agent not found', HttpStatus.NOT_FOUND);
       }
 
-      const result = await this.testingDatasetService.aiGenerateDataset(checkpoint, agent.name, tenantId);
+      const checkpoint = await this.pricingAgentService.findLatestCheckpoint(agentId, tenantId);
+      if (!checkpoint) {
+        throw new HttpException('No checkpoint found for the specified agent', HttpStatus.NOT_FOUND);
+      }
 
-      this.logger.log(`Successfully built tests for agent: ${agentId}, checkpoint: ${checkpoint._id}`);
+      // Create pricing agent context from agent name
+      const pricingAgentContext = `${agent.name} pricing agent for generating quotes and pricing calculations`;
 
-      const dataset = await this.testingDatasetService.findOneTestingDatasetWithTests(result._id!.toString(), tenantId);
-      return dataset;
+      // Generate example data from the schema using AI agents
+      const calculatePriceExample = await this.exampleGeneratorService.generateExampleFromSchema(
+        pricingAgentContext,
+        checkpoint.functionSchema!,
+        checkpoint.functionCode!,
+        tenantId
+      );
+      const chatConversationExample = await this.exampleGeneratorService.generateChatExample(
+        pricingAgentContext,
+        checkpoint.functionSchema!,
+        checkpoint.functionCode!,
+        tenantId
+      );
+
+      this.logger.log(`Successfully generated example request bodies for agent: ${agentId}`);
+      return {
+        calculatePrice: calculatePriceExample,
+        chatConversation: chatConversationExample
+      };
     } catch (error) {
-      this.logger.error(`Failed to build tests for agent ${agentId}: ${error.message}`, error.stack);
-
+      this.logger.error(`Failed to get example request bodies: ${error.message}`, error.stack);
       if (error instanceof HttpException) {
         throw error;
       }
-      throw new HttpException(
-        `Failed to build tests: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+      throw new HttpException(`Internal server error: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

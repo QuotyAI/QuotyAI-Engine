@@ -10,7 +10,7 @@ import { PricingAgentWithLatestCheckpoint } from 'src/dtos/pricing-agent-with-la
 import { AddHumanInputMessageDto } from '../dtos/add-input-message.dto';
 import { AiSchemaGenerationAgentService } from '../ai-agents/ai-schema-generation.agent';
 import { AiFormulaGenerationAgentService } from '../ai-agents/ai-formula-generation.agent';
-import { LLMService } from '../ai-agents/llm.service';
+import { LangchainCongigService } from '../ai-agents/langchain-config.service';
 
 type PricingAgentFilter = Filter<PricingAgent>;
 type CheckpointFilter = Filter<PricingAgentCheckpoint>;
@@ -45,7 +45,7 @@ export class PricingAgentService {
     @Inject('DATABASE_CONNECTION') private db: Db,
     private readonly aiSchemaGenerationAgent: AiSchemaGenerationAgentService,
     private readonly aiFormulaGenerationAgent: AiFormulaGenerationAgentService,
-    private readonly llmService: LLMService,
+    private readonly llmService: LangchainCongigService,
   ) {
     this.logger.log('PricingAgentService initialized');
   }
